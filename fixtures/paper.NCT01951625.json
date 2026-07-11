@@ -1,0 +1,43 @@
+{
+  "nctId": "NCT01951625",
+  "source": {
+    "type": "pdf",
+    "path": "demo-assets/NCT01951625.pdf",
+    "note": "Paper is paywalled (JAMA); text extracted from the locally-provided PDF, NOT from Europe PMC. Extracted with pdfjs-dist. Body text only; figures/tables retained where they carry outcome data.",
+    "extractedFrom": "pages 2-8 (Methods, Statistical Analysis, Results, Exploratory End Points)"
+  },
+  "citation": {
+    "title": "Effect of Vericiguat, a Soluble Guanylate Cyclase Stimulator, on Natriuretic Peptide Levels in Patients With Worsening Chronic Heart Failure and Reduced Ejection Fraction: The SOCRATES-REDUCED Randomized Trial",
+    "journal": "JAMA",
+    "year": 2015,
+    "citationString": "JAMA. 2015;314(21):2251-2262",
+    "doi": "10.1001/jama.2015.15734",
+    "trialName": "SOCRATES-REDUCED"
+  },
+  "sections": [
+    {
+      "section": "Methods — Study End Points",
+      "text": "The primary end point of the study was change from baseline to week 12 in log-transformed NT-proBNP level. All additional end points were exploratory or related to safety. Echocardiographic end points included changes in LVEF, left ventricular end-diastolic volume (LVEDV), and left ventricular end-systolic volume (LVESV) from baseline to week 12. Additional end points included clinical events, blood pressure and heart rate, and changes in multiple biomarker levels. For the primary end point and the other biomarker end points, only blood samples analyzed by the central laboratory were considered (Covance Central Laboratory Services, Geneva, Switzerland). Echocardiograms at randomization and week 12 were read centrally by the blinded echocardiography core laboratory (Charité University Medicine, Berlin, Germany). Clinical events were adjudicated by a blinded clinical event committee."
+    },
+    {
+      "section": "Methods — Statistical Analysis",
+      "text": "For the primary analysis of the primary end point, the 3 highest-dose vericiguat groups (2.5 mg, 5 mg, and 10 mg) were prespecified to be pooled and compared with placebo with a 2-sample t test at the 1-sided significance level α = 5%. The 1.25-mg dose group was assumed to have no or minimal effect and hence was not included in the pool of presumed effective dose groups. Secondary analyses of the primary end point were prespecified to investigate a dose-response relationship by linear regression model. In addition, if the null hypothesis of the primary analysis was rejected, pairwise comparisons of the individual vericiguat groups with placebo were planned in a hierarchical manner with a 2-sample t test at the 1-sided significance level α = 5%. If the primary analysis showed no statistical significance, comparisons of individual dose groups with placebo were to be deemed descriptive only. Only the primary and secondary analyses of NT-proBNP change from baseline to 12 weeks were prespecified in the hierarchical testing procedure and thus were α-adjusted (secondary analyses only α-adjusted if primary analysis statistically significant). All other analyses and end points were only exploratory, and hence P values are only descriptive and do not reflect statistical significance. SAS version 9.2 was used for all analyses."
+    },
+    {
+      "section": "Results — Primary End Point",
+      "text": "The primary end point, change in log-transformed NT-proBNP level from baseline to 12 weeks, was not significantly different in the pooled vericiguat treatment group (log-transformed values: baseline, 7.969; 12 weeks, 7.567; difference, −0.402; geometric means: baseline, 2890 pg/mL; 12 weeks, 1932 pg/mL) compared with the placebo group (log-transformed values: baseline, 8.283; 12 weeks, 8.002; difference, −0.280; geometric means: baseline, 3955 pg/mL; 12 weeks, 2988 pg/mL) (difference of means, −0.122; 90% CI, −0.32 to 0.07; ratio of geometric means on original scale, 0.885; 90% CI, 0.73-1.08; P = .15). Exploratory secondary analyses of the primary end point using linear regression modeling suggested a dose-response relationship (P < .02), with higher vericiguat doses associated with greater reduction in NT-proBNP levels. Several sensitivity analyses, including imputation by last observation carried forward, an analysis of observed cases, and multiple imputation analysis, did not meaningfully alter results."
+    },
+    {
+      "section": "Results — Exploratory End Points",
+      "text": "Pairwise exploratory analyses of individual vericiguat groups found differences in the primary end point between the 10-mg vericiguat group (log-transformed values: baseline, 8.131; 12 weeks, 7.602; difference, −0.529; geometric means: baseline, 3400 pg/mL; 12 weeks, 2001 pg/mL) and placebo, with greater reductions in NT-proBNP level with vericiguat (difference of means, −0.250; 90% CI, −0.50 to 0.00; ratio of geometric means on original scale, 0.779; 90% CI, 0.61-1.00; P = .048). Comparison of the primary end point between other individual vericiguat groups and placebo all yielded P > .05 in these descriptive analyses. Additional select exploratory clinical and echocardiographic end points are displayed in Table 3 and Table 4. All-cause death at 12 weeks occurred at a rate of 3.3% among patients taking placebo and 2.2% to 4.4% among patients randomized to receive vericiguat. The rate of HF hospitalization at 12 weeks was 9.9% in the 10-mg and 5-mg vericiguat groups, 17.6% in the 2.5-mg and 1.25-mg groups, and 17.4% in the placebo group. The rate of the composite of cardiovascular death or HF hospitalization was 11% in the 10-mg vericiguat group, 12.1% in the 5-mg group, 19.8% in the 2.5-mg group, 18.7% in the 1.25-mg group, and 19.6% in the placebo group."
+    },
+    {
+      "section": "Results — Table 3 (Select Clinical Exploratory End Points)",
+      "text": "Table 3. Select Clinical Exploratory End Points (Full Analysis Set). Up to week 12, No. (%): All-cause death — Placebo 3 (3.3), Vericiguat 1.25 mg 4 (4.4), 2.5 mg 3 (3.3), 2.5–5 mg 3 (3.3), 2.5–10 mg 2 (2.2). CV death — Placebo 3 (3.3), 1.25 mg 4 (4.4), 2.5 mg 2 (2.2), 5 mg 2 (2.2), 10 mg 2 (2.2). HF hospitalization — Placebo 16 (17.4), 1.25 mg 16 (17.6), 2.5 mg 16 (17.6), 5 mg 9 (9.9), 10 mg 9 (9.9). CV death or HF hospitalization — Placebo 18 (19.6), 1.25 mg 17 (18.7), 2.5 mg 18 (19.8), 5 mg 11 (12.1), 10 mg 10 (11.0). End of follow-up (16 wk): All-cause death — Placebo 6 (6.5), 1.25 mg 6 (6.6), 2.5 mg 5 (5.5), 5 mg 3 (3.3), 10 mg 4 (4.4)."
+    },
+    {
+      "section": "Results — Table 4 (Select Echocardiographic and Vital Sign Exploratory End Points)",
+      "text": "Table 4. Change from baseline to 12 weeks; difference of means, dosing group − placebo (95% CI), 2-sided P. LVEF, %: Placebo 1.52; 2.5–10 mg 3.68, diff 2.17 (0.33 to 4.00), P=.02; 2.5–5 mg 2.07, diff 0.56 (−1.08 to 2.19), P=.50; 2.5 mg 2.74, diff 1.23 (−0.30 to 2.76), P=.12; 1.25 mg 2.84, diff 1.33 (−0.12 to 2.77), P=.07. LVEDV, mL: Placebo −7.26; 2.5–10 mg −7.32, diff −0.07 (−12.28 to 12.15), P=.99; 2.5–5 mg −17.09, diff −9.83 (−26.01 to 6.34), P=.23. LVESV, mL: Placebo −6.83; 2.5–10 mg −11.02, diff −4.19 (−14.04 to 5.67), P=.40. Systolic BP, mm Hg: Placebo −5.14; 2.5–10 mg −5.64, diff −0.50 (−5.14 to 4.15), P=.83. Diastolic BP, mm Hg: Placebo −4.17; 2.5–10 mg −4.05, diff 0.13 (−3.02 to 3.28), P=.94. Heart rate, /min: Placebo −0.56; 2.5–10 mg 0.55, diff 1.11 (−2.74 to 4.96), P=.57."
+    }
+  ]
+}

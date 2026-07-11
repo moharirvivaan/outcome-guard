@@ -49,3 +49,51 @@ Entry format (copy this for every future entry):
     Europe PMC shapes).
   - Add the direct-fetch data-access layer for ClinicalTrials.gov API v2 and Europe PMC.
   - Wire up the first AI SDK v6 route using the Anthropic provider.
+
+## [2026-07-11 15:08] Shared data contract + NCT01951625 demo fixtures
+- What was done:
+  - Built the shared Zod-based data contract in `src/lib/contract/` (types inferred
+    from schemas so runtime and compile-time shapes cannot drift): RegisteredOutcome,
+    ReportedOutcome, OutcomeMatch, TrialRecord (+ PublicationRef), AuditResult
+    (+ AuditMetadata), and the OutcomeClassification enum.
+  - Fetched the live ClinicalTrials.gov API v2 response for NCT01951625 and saved it raw
+    to `fixtures/registry.NCT01951625.json` (HTTP 200, 122 KB).
+  - Extracted the Methods/Results text from `demo-assets/NCT01951625.pdf` (paywalled JAMA
+    paper — extracted locally with pdfjs-dist, NOT from Europe PMC) into
+    `fixtures/paper.NCT01951625.json` as labeled sections with a verbatim quote of the key
+    "all additional end points were exploratory" sentence.
+  - Wrote `DEMO_TRIALS.md`: primary trial NCT01951625 (Vericiguat/SOCRATES-REDUCED) plus
+    backups NCT00784433 (CASCADE) and NCT01163032 (Tasimelteon SET, with the two-trials-in-
+    one-paper caveat and its companion NCT01429740/RESET). Includes a clearly-marked
+    GROUND TRUTH oracle section under NCT01951625.
+- Files created/changed:
+  - Added: `src/lib/contract/{index,outcomes,match,trial,audit}.ts`.
+  - Added: `fixtures/registry.NCT01951625.json`, `fixtures/paper.NCT01951625.json`.
+  - Added: `DEMO_TRIALS.md`.
+- Key decisions / assumptions:
+  - Contract split across small files with a barrel `index.ts`; feature code imports from
+    `@/lib/contract`. RegisteredOutcome.type is two-valued (primary|secondary) per the spec,
+    with an optional `sourceType` preserving the raw registry bucket (primary/secondary/other)
+    since ClinicalTrials.gov v2 files SOCRATES-REDUCED's non-primary outcomes under
+    `otherOutcomes`.
+  - OutcomeMatch refs are indices into the AuditResult arrays and are nullable on one side
+    (dropped → no reportedRef; added → no registeredRef); a `.refine` rejects both-null.
+  - COMPare's per-trial counts could not be scraped (JS-rendered SPA / letters). Rather than
+    fabricate the oracle, the exact dropped/added COUNTS are left as `[TO TRANSCRIBE from
+    COMPare letter]` placeholders (12 of them). The GROUND TRUTH registered-outcome list IS
+    verified (transcribed from the registry fixture); the dropped/added verdicts are a DERIVED
+    first pass to be reconciled with the COMPare letter.
+- How to verify it works:
+  - `npx tsc --noEmit` and `npm run lint` both pass clean.
+  - Ran a runtime smoke test (`tsx`): AuditResultSchema validates a sample audit, the
+    both-null OutcomeMatch is rejected, and both fixtures import/parse.
+  - `test -s fixtures/registry.NCT01951625.json` → non-empty (122 KB), valid JSON,
+    nctId=NCT01951625. `fixtures/paper.NCT01951625.json` → 6 sections. `DEMO_TRIALS.md`
+    exists with the "GROUND TRUTH — NCT01951625" section.
+- What's next / open issues:
+  - Transcribe the 12 `[TO TRANSCRIBE]` COMPare figures + exact added/dropped outcome names
+    into DEMO_TRIALS.md from the published COMPare correspondence (feeds the test oracle).
+  - Reconcile the derived GROUND TRUTH dropped/added verdicts against the registration as it
+    stood at publication (today's fixture has all non-primary outcomes in `otherOutcomes`).
+  - Build the registry-normalization layer that maps the raw ClinicalTrials.gov v2 study into
+    TrialRecord, and the paper→ReportedOutcome extraction (Prompt 3, Subagent B matching engine).
