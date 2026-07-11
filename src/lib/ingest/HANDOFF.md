@@ -1,0 +1,3 @@
+Exposes: `getTrial` (clinicaltrials.ts), `getPaperText` (europepmc.ts), `pdfToText` (pdf.ts) — all in `src/lib/ingest/`; import types from `@/lib/contract`.
+getTrial: `const trial = await getTrial("NCT01951625")` -> validated `TrialRecord` (nctId, title, status, registeredOutcomes[primary|secondary + sourceType], resultPublicationRefs[{citation,pmid,url}]); throws on non-200 or schema mismatch.
+getPaperText/pdfToText: `await getPaperText({ pmid?, nctId?, title? })` -> `{ text, source, section:"fulltext"|"abstract" }` (Methods+Results if full text, else abstract); `await pdfToText(bytes)` is a fallback that throws "PDF extraction requires pdfjs-dist/pdf-parse; not installed" until a PDF lib is added.

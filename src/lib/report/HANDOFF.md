@@ -1,0 +1,3 @@
+Exposes: `computeIntegrityScore(audit): number` and `scoreBreakdown(audit): ScoreBreakdown` (from `@/lib/report/score`); `generateLetter(audit, opts?): Promise<string>` (from `@/lib/report/letter`).
+Call: `computeIntegrityScore(auditResult)` -> 0–100; `scoreBreakdown(auditResult)` -> {score, baseline, totalPenalty, totalReward, components[], counts} for explaining the number; `await generateLetter(auditResult, { model?: "claude-opus-4-8" })` -> COMPare-style letter string.
+Env: `ANTHROPIC_API_KEY` is OPTIONAL — when unset (or on any AI-SDK error) `generateLetter` falls back to a deterministic, demo-quality template letter, so it always works offline; `score.ts` is pure/deterministic with no env or I/O.
