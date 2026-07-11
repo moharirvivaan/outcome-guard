@@ -3,10 +3,14 @@
 /**
  * OutcomeLedger — one row per OutcomeMatch, color-coded by classification.
  *
- * Rows STREAM IN: rather than showing every match at once, the ledger reveals
- * them one-by-one on a timer to make the demo feel like a live audit. As each
- * row lands it is reported back via `onReveal` so the parent can recompute a
- * running integrity score.
+ * Two paced modes:
+ *  - TIMER mode (default, offline demo): given a complete `audit`, the ledger
+ *    reveals rows one-by-one on a timer to feel like a live audit, calling
+ *    `onReveal` per row so the parent can run a score down.
+ *  - STREAMED mode (live route): the parent passes `streamed` + the running
+ *    `matches` array (rows already received from the server). The ledger renders
+ *    exactly those, in arrival order, and does not run its own timer — the
+ *    network is the pace-setter. `streaming` tells it whether more are coming.
  *
  * Accessibility: each row carries a text label + glyph badge, not just a color.
  */
@@ -16,12 +20,21 @@ import { PRESENTATION } from "./outcomePresentation";
 
 interface OutcomeLedgerProps {
   audit: AuditResult;
-  /** ms between each revealed row. Default 220ms. */
+  /** ms between each revealed row (TIMER mode only). Default 220ms. */
   intervalMs?: number;
-  /** Called with the match each time a row is revealed (for running score). */
+  /** Called with the match each time a row is revealed (TIMER mode; for running score). */
   onReveal?: (match: OutcomeMatch, indexRevealed: number, total: number) => void;
-  /** Called once all rows are revealed. */
+  /** Called once all rows are revealed (TIMER mode). */
   onComplete?: () => void;
+  /**
+   * STREAMED mode. When set, the ledger renders `matches` as-is (no timer) —
+   * the parent controls arrival by appending to `matches` as events land.
+   */
+  streamed?: boolean;
+  /** STREAMED mode: the matches received so far, in arrival order. */
+  matches?: OutcomeMatch[];
+  /** STREAMED mode: true while more matches/events are still expected. */
+  streaming?: boolean;
 }
 
 /** Resolve the display measure text for a match from either side. */
@@ -136,7 +149,76 @@ function Row({
   );
 }
 
-export default function OutcomeLedger({
+export default function OutcomeLedger(props: OutcomeLedgerProps) {
+  return props.streamed ? (
+    <StreamedLedger {...props} />
+  ) : (
+    <TimerLedger {...props} />
+  );
+}
+
+/** Shared header + list chrome for both modes. */
+function LedgerShell({
+  streaming,
+  revealed,
+  total,
+  children,
+}: {
+  streaming: boolean;
+  revealed: number;
+  total: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="mb-3 flex items-center justify-between">
+        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
+          Outcome ledger
+        </h2>
+        <span className="text-xs text-zinc-500" aria-live="polite">
+          {streaming ? (
+            <span className="inline-flex items-center gap-1.5">
+              <span className="h-2 w-2 animate-pulse rounded-full bg-blue-500" />
+              Auditing… {revealed}
+              {total > 0 ? `/${total}` : ""}
+            </span>
+          ) : (
+            <>Reviewed {revealed} outcome matches</>
+          )}
+        </span>
+      </div>
+      <ul className="flex flex-col gap-2">
+        {children}
+        {streaming ? (
+          <li className="border-l-4 border-l-zinc-200 dark:border-l-zinc-800">
+            <div className="animate-pulse px-4 py-3">
+              <div className="h-3 w-1/3 rounded bg-zinc-200 dark:bg-zinc-800" />
+              <div className="mt-2 h-3 w-2/3 rounded bg-zinc-100 dark:bg-zinc-900" />
+            </div>
+          </li>
+        ) : null}
+      </ul>
+    </div>
+  );
+}
+
+/** STREAMED mode: rows are whatever the parent has received so far. */
+function StreamedLedger({
+  audit,
+  matches = [],
+  streaming = false,
+}: OutcomeLedgerProps) {
+  return (
+    <LedgerShell streaming={streaming} revealed={matches.length} total={0}>
+      {matches.map((m, idx) => (
+        <Row key={idx} audit={audit} match={m} />
+      ))}
+    </LedgerShell>
+  );
+}
+
+/** TIMER mode (offline demo): reveal the audit's matches on an interval. */
+function TimerLedger({
   audit,
   intervalMs = 220,
   onReveal,
@@ -183,35 +265,10 @@ export default function OutcomeLedger({
   const streaming = revealed < ordered.length;
 
   return (
-    <div>
-      <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-          Outcome ledger
-        </h2>
-        <span className="text-xs text-zinc-500" aria-live="polite">
-          {streaming ? (
-            <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-blue-500" />
-              Auditing… {revealed}/{ordered.length}
-            </span>
-          ) : (
-            <>Reviewed {ordered.length} outcome matches</>
-          )}
-        </span>
-      </div>
-      <ul className="flex flex-col gap-2">
-        {ordered.slice(0, revealed).map((m, idx) => (
-          <Row key={idx} audit={audit} match={m} />
-        ))}
-        {streaming ? (
-          <li className="border-l-4 border-l-zinc-200 dark:border-l-zinc-800">
-            <div className="animate-pulse px-4 py-3">
-              <div className="h-3 w-1/3 rounded bg-zinc-200 dark:bg-zinc-800" />
-              <div className="mt-2 h-3 w-2/3 rounded bg-zinc-100 dark:bg-zinc-900" />
-            </div>
-          </li>
-        ) : null}
-      </ul>
-    </div>
+    <LedgerShell streaming={streaming} revealed={revealed} total={ordered.length}>
+      {ordered.slice(0, revealed).map((m, idx) => (
+        <Row key={idx} audit={audit} match={m} />
+      ))}
+    </LedgerShell>
   );
 }

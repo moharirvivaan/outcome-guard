@@ -298,3 +298,62 @@ Entry format (copy this for every future entry):
   - If the UI wants to visualize the breakdown, it can now render `scoreBreakdown().terms`.
   - k-values are demo-tuned; revisit once real (non-mock) audits and the transcribed COMPare
     oracle exist, to confirm the band feels right across trials.
+
+## [2026-07-11 15:54] Live streaming audit route + UI wired to real pipeline
+- What was done:
+  - Added a streaming audit API and connected the UI to it, replacing the mock as
+    the default path (mock kept as an explicit offline fallback).
+  - Contract: added `AuditEvent` (discriminated union of the staged streaming
+    events) + `AuditRequest` in src/lib/contract/events.ts, and a structural
+    `ScoreBreakdownLike` in src/lib/contract/score-shape.ts so the contract can
+    carry a score breakdown WITHOUT importing the feature-layer scorer (keeps the
+    contract's read-only, no-reverse-dependency rule). Exported both from the barrel.
+  - Route: src/app/api/audit/route.ts — POST { nctId, paperSource?, pdfBase64? }
+    returns a ReadableStream of newline-delimited JSON AuditEvents. Pipeline:
+    getTrial → resolve paper → extractReported (Sonnet 5) → matchOutcomes (Opus 4.8)
+    → computeIntegrityScore/scoreBreakdown → validate AuditResult → done. Emits
+    registry / paper / extracting / reported / matching / one `match` per
+    OutcomeMatch / scored / done / error. Node runtime; ANTHROPIC_API_KEY read
+    server-side only and guarded up front with a clean error.
+  - Paper source: demo trial NCT01951625 loads fixtures/paper.NCT01951625.json from
+    disk (no network); any other id uses Europe PMC (registry PMID → full text →
+    abstract fallback). `paperSource: "fixture"|"europepmc"|"pdf"` overrides.
+  - UI: new useAuditStream hook consumes the NDJSON stream and builds state
+    incrementally; OutcomeLedger gained a STREAMED mode (parent-controlled rows, no
+    timer) alongside the existing TIMER mode; DemoApp now runs live by default,
+    streams ledger rows + a live gauge, keeps an "Offline demo" checkbox for the
+    mock, and shows dismissible error banners for every failure path. The
+    "reviewer aid, not a verdict" note + per-row confidence stay visible.
+- Files created/changed:
+  - Added: src/app/api/audit/route.ts, src/components/useAuditStream.ts,
+    src/lib/contract/events.ts, src/lib/contract/score-shape.ts.
+  - Edited: src/components/DemoApp.tsx, src/components/OutcomeLedger.tsx,
+    src/lib/contract/index.ts, src/components/HANDOFF.md.
+- Key decisions / assumptions:
+  - matchOutcomes resolves all matches in ONE Opus call, so the per-`match` events
+    are fanned out from the returned array (rows still stream into the ledger one by
+    one) — the model does not stream partial matches. Noted honestly.
+  - The contract must not depend on feature code, so ScoredEvent carries the loose
+    `ScoreBreakdownLike`; the real `ScoreBreakdown` is assignable to it (asserted).
+  - `next start` does not auto-load .env.local; for local verification the key was
+    sourced into the process env. On Vercel/hosting, set ANTHROPIC_API_KEY as a
+    server env var.
+- How to verify it works (all run):
+  - Live demo end-to-end WITH the key: POST {nctId:"NCT01951625"} streamed 34 events
+    — registry (15 outcomes, live), paper (fixture, 5970 chars), reported 18, 27
+    matches, scored = 20, done = 20/100. The real engine flagged ICD/CRT-D + all 7
+    named biomarkers as silently_dropped and the exploratory pairwise/dose-response
+    + all-cause-death breakouts as silently_added — matching DEMO_TRIALS GROUND TRUTH.
+  - Europe PMC path: POST {nctId:"NCT00784433"} resolved via registry PMID, full
+    text not open-access so it degraded cleanly to the ABSTRACT (1732 chars),
+    extracted 10, matched 11, scored 67. Abstract-only is weaker but does not crash.
+  - Failure paths: nonexistent NCT → error{failedStage:"registry"}; invalid id →
+    clean error; missing ANTHROPIC_API_KEY → "use the offline demo" error, no SDK crash.
+  - Offline mock still renders and scores 20; engine fixture check still green.
+  - `npx tsc --noEmit`, `npm run lint`, `npm run build` all clean (/api/audit is a ƒ route).
+- What's next / open issues:
+  - Europe PMC often yields abstract-only for paywalled papers; a PDF-upload flow
+    (paperSource:"pdf") is wired in the route but needs a PDF lib (pdfToText still
+    throws until pdfjs-dist is added) and a UI file-picker.
+  - Consider persisting/caching audits and generating the letter (report/letter.ts)
+    from the live result behind a button.

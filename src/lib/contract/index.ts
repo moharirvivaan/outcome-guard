@@ -35,3 +35,23 @@ export {
   AuditResultSchema,
   type AuditResult,
 } from "./audit";
+
+export type {
+  ScorePenaltyTermLike,
+  ScoreBreakdownLike,
+} from "./score-shape";
+
+export type {
+  AuditStage,
+  AuditEvent,
+  AuditRequest,
+  RegistryEvent,
+  PaperEvent,
+  ExtractingEvent,
+  ReportedEvent,
+  MatchingEvent,
+  MatchEvent,
+  ScoredEvent,
+  DoneEvent,
+  ErrorEvent,
+} from "./events";
