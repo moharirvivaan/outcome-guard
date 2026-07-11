@@ -27,16 +27,21 @@ export interface ClassPresentation {
   penalty: number;
 }
 
+/*
+ * Row + badge classes use the semantic status tokens from globals.css
+ * (--color-ok / --color-danger / --color-warn / --color-caution and their
+ * -tint / -fg pairs), which are defined for BOTH light and dark mode and were
+ * chosen so each foreground meets WCAG AA (>=4.5:1) on its own tinted surface.
+ * One place to change status semantics; ledger + gauge read from here.
+ */
 export const PRESENTATION: Record<OutcomeClassification, ClassPresentation> = {
   reported_as_prespecified: {
     severity: "green",
     label: "Faithfully reported",
     glyph: "✓",
     blurb: "Prespecified outcome reported as registered.",
-    rowClass:
-      "border-l-emerald-500 bg-emerald-50/60 dark:bg-emerald-500/10",
-    badgeClass:
-      "bg-emerald-100 text-emerald-800 ring-1 ring-emerald-600/30 dark:bg-emerald-500/15 dark:text-emerald-300",
+    rowClass: "border-l-ok bg-ok-tint",
+    badgeClass: "bg-ok-tint text-ok-fg ring-1 ring-ok/40",
     penalty: 0,
   },
   silently_dropped: {
@@ -44,9 +49,8 @@ export const PRESENTATION: Record<OutcomeClassification, ClassPresentation> = {
     label: "Silently dropped",
     glyph: "✕",
     blurb: "Prespecified outcome missing from the paper.",
-    rowClass: "border-l-red-500 bg-red-50/60 dark:bg-red-500/10",
-    badgeClass:
-      "bg-red-100 text-red-800 ring-1 ring-red-600/30 dark:bg-red-500/15 dark:text-red-300",
+    rowClass: "border-l-danger bg-danger-tint",
+    badgeClass: "bg-danger-tint text-danger-fg ring-1 ring-danger/40",
     penalty: 8,
   },
   silently_added: {
@@ -54,9 +58,8 @@ export const PRESENTATION: Record<OutcomeClassification, ClassPresentation> = {
     label: "Silently added",
     glyph: "+",
     blurb: "Reported outcome that was never prespecified.",
-    rowClass: "border-l-amber-500 bg-amber-50/60 dark:bg-amber-500/10",
-    badgeClass:
-      "bg-amber-100 text-amber-900 ring-1 ring-amber-600/30 dark:bg-amber-500/15 dark:text-amber-300",
+    rowClass: "border-l-warn bg-warn-tint",
+    badgeClass: "bg-warn-tint text-warn-fg ring-1 ring-warn/40",
     penalty: 4,
   },
   promoted: {
@@ -64,9 +67,8 @@ export const PRESENTATION: Record<OutcomeClassification, ClassPresentation> = {
     label: "Promoted",
     glyph: "▲",
     blurb: "A prespecified secondary reported as primary.",
-    rowClass: "border-l-amber-500 bg-amber-50/60 dark:bg-amber-500/10",
-    badgeClass:
-      "bg-amber-100 text-amber-900 ring-1 ring-amber-600/30 dark:bg-amber-500/15 dark:text-amber-300",
+    rowClass: "border-l-warn bg-warn-tint",
+    badgeClass: "bg-warn-tint text-warn-fg ring-1 ring-warn/40",
     penalty: 3,
   },
   demoted: {
@@ -74,9 +76,8 @@ export const PRESENTATION: Record<OutcomeClassification, ClassPresentation> = {
     label: "Demoted",
     glyph: "▼",
     blurb: "A prespecified outcome reframed as merely exploratory.",
-    rowClass: "border-l-orange-500 bg-orange-50/60 dark:bg-orange-500/10",
-    badgeClass:
-      "bg-orange-100 text-orange-900 ring-1 ring-orange-600/30 dark:bg-orange-500/15 dark:text-orange-300",
+    rowClass: "border-l-caution bg-caution-tint",
+    badgeClass: "bg-caution-tint text-caution-fg ring-1 ring-caution/40",
     penalty: 5,
   },
   timeframe_changed: {
@@ -84,22 +85,29 @@ export const PRESENTATION: Record<OutcomeClassification, ClassPresentation> = {
     label: "Time frame changed",
     glyph: "⏱",
     blurb: "Reported at a different time frame than registered.",
-    rowClass: "border-l-amber-500 bg-amber-50/60 dark:bg-amber-500/10",
-    badgeClass:
-      "bg-amber-100 text-amber-900 ring-1 ring-amber-600/30 dark:bg-amber-500/15 dark:text-amber-300",
+    rowClass: "border-l-warn bg-warn-tint",
+    badgeClass: "bg-warn-tint text-warn-fg ring-1 ring-warn/40",
     penalty: 3,
   },
 };
 
-/** Colors for the score gauge arc keyed by score band. */
+/**
+ * Colors for the score gauge arc keyed by score band. The `hex` values read the
+ * live CSS custom properties so the arc tracks light/dark automatically; the
+ * text class uses the same semantic tokens.
+ */
 export function scoreColor(score: number): {
-  hex: string;
+  cssVar: string;
   label: string;
   textClass: string;
 } {
   if (score >= 75)
-    return { hex: "#10b981", label: "High integrity", textClass: "text-emerald-600 dark:text-emerald-400" };
+    return { cssVar: "var(--ok)", label: "High integrity", textClass: "text-ok-fg" };
   if (score >= 50)
-    return { hex: "#f59e0b", label: "Moderate concerns", textClass: "text-amber-600 dark:text-amber-400" };
-  return { hex: "#ef4444", label: "Serious outcome switching", textClass: "text-red-600 dark:text-red-400" };
+    return { cssVar: "var(--warn)", label: "Moderate concerns", textClass: "text-warn-fg" };
+  return {
+    cssVar: "var(--danger)",
+    label: "Serious outcome switching",
+    textClass: "text-danger-fg",
+  };
 }

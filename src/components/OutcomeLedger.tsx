@@ -81,52 +81,50 @@ function Row({
 
   return (
     <li
-      className={`border-l-4 ${p.rowClass} rounded-r-md animate-[fadeIn_0.35s_ease-out]`}
+      className={`border-l-4 ${p.rowClass} rounded-r-lg animate-[fadeIn_0.35s_ease-out]`}
     >
       <div className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-start sm:gap-4">
         {/* badge */}
         <div className="flex shrink-0 items-center gap-2">
           <span
-            className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold ${p.badgeClass}`}
+            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-semibold ${p.badgeClass}`}
           >
-            <span aria-hidden>{p.glyph}</span>
+            <span aria-hidden className="text-[13px] leading-none">
+              {p.glyph}
+            </span>
             {p.label}
           </span>
         </div>
 
         {/* body */}
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-zinc-900 dark:text-zinc-100">
-            {measure}
-          </p>
-          <p className="mt-0.5 text-xs text-zinc-500">
+          <p className="text-sm font-medium text-foreground">{measure}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">
             {originFor(match)} · confidence {confidencePct}%
           </p>
-          <p className="mt-1 text-sm text-zinc-600 dark:text-zinc-400">
-            {match.rationale}
-          </p>
+          <p className="mt-1 text-sm text-muted-foreground">{match.rationale}</p>
 
           {evidence ? (
             <div className="mt-2">
               <button
                 type="button"
                 onClick={() => setOpen((v) => !v)}
-                className="text-xs font-medium text-blue-600 underline-offset-2 hover:underline dark:text-blue-400"
+                className="rounded text-xs font-semibold text-primary underline-offset-2 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-1"
                 aria-expanded={open}
               >
                 {open ? "Hide evidence" : "Show verbatim evidence"}
               </button>
               {open ? (
-                <blockquote className="mt-2 border-l-2 border-zinc-300 pl-3 text-xs italic text-zinc-600 dark:border-zinc-700 dark:text-zinc-400">
+                <blockquote className="mt-2 border-l-2 border-border pl-3 font-mono text-xs italic text-muted-foreground">
                   “{evidence.quote}”
-                  <footer className="mt-1 not-italic text-[11px] text-zinc-400">
+                  <footer className="mt-1 not-italic text-[11px] text-muted-foreground/80">
                     — {evidence.section}
                   </footer>
                 </blockquote>
               ) : null}
             </div>
           ) : (
-            <p className="mt-2 text-xs italic text-zinc-400">
+            <p className="mt-2 text-xs italic text-muted-foreground/80">
               No paper text — outcome absent from the publication.
             </p>
           )}
@@ -134,12 +132,12 @@ function Row({
 
         {/* confidence meter */}
         <div className="hidden w-24 shrink-0 sm:block">
-          <div className="mb-1 text-right text-[11px] text-zinc-400">
+          <div className="mb-1 text-right text-[11px] tabular-nums text-muted-foreground">
             {confidencePct}%
           </div>
-          <div className="h-1.5 w-full rounded-full bg-zinc-200 dark:bg-zinc-800">
+          <div className="h-1.5 w-full rounded-full bg-surface-muted">
             <div
-              className="h-1.5 rounded-full bg-zinc-500 dark:bg-zinc-400"
+              className="h-1.5 rounded-full bg-primary"
               style={{ width: `${confidencePct}%` }}
             />
           </div>
@@ -172,13 +170,11 @@ function LedgerShell({
   return (
     <div>
       <div className="mb-3 flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-zinc-900 dark:text-zinc-100">
-          Outcome ledger
-        </h2>
-        <span className="text-xs text-zinc-500" aria-live="polite">
+        <h2 className="text-lg font-semibold text-foreground">Outcome ledger</h2>
+        <span className="text-xs text-muted-foreground" aria-live="polite">
           {streaming ? (
             <span className="inline-flex items-center gap-1.5">
-              <span className="h-2 w-2 animate-pulse rounded-full bg-blue-500" />
+              <span className="h-2 w-2 animate-pulse rounded-full bg-primary" />
               Auditing… {revealed}
               {total > 0 ? `/${total}` : ""}
             </span>
@@ -190,10 +186,10 @@ function LedgerShell({
       <ul className="flex flex-col gap-2">
         {children}
         {streaming ? (
-          <li className="border-l-4 border-l-zinc-200 dark:border-l-zinc-800">
+          <li className="rounded-r-lg border-l-4 border-l-border">
             <div className="animate-pulse px-4 py-3">
-              <div className="h-3 w-1/3 rounded bg-zinc-200 dark:bg-zinc-800" />
-              <div className="mt-2 h-3 w-2/3 rounded bg-zinc-100 dark:bg-zinc-900" />
+              <div className="h-3 w-1/3 rounded bg-surface-muted" />
+              <div className="mt-2 h-3 w-2/3 rounded bg-surface-muted/60" />
             </div>
           </li>
         ) : null}

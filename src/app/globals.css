@@ -1,31 +1,123 @@
 @import "tailwindcss";
 
+/*
+ * outcome-guard design tokens — "Accessible & Ethical" clinical style.
+ * Calm cyan primary + health-green accent, WCAG-checked status colors.
+ * Semantic tokens (not raw hex in components); light + dark defined together.
+ */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+  /* Surfaces */
+  --background: #f8fbfc; /* near-white cyan-tinted */
+  --surface: #ffffff;
+  --surface-muted: #eef5f8;
+  --foreground: #0d2b33; /* deep teal-ink; ~13:1 on background */
+  --muted-foreground: #4a6b73; /* ~5.1:1 on surface */
+  --border: #cfe3e9;
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  /* Brand */
+  --primary: #0e7490; /* cyan-700; 4.9:1 on white for text/icons */
+  --primary-strong: #155e75; /* cyan-800 for hover */
+  --on-primary: #ffffff;
+  --accent: #047857; /* emerald-700; health green, 4.8:1 on white */
+  --ring: #0891b2; /* focus ring, cyan-600 */
+
+  /* Status (ledger). Each foreground meets >=4.5:1 on its own tint. */
+  --ok: #047857; /* faithful — green */
+  --ok-tint: #ecfdf5;
+  --ok-fg: #065f46;
+  --danger: #b91c1c; /* dropped — red, 5.9:1 on white */
+  --danger-tint: #fef2f2;
+  --danger-fg: #991b1b;
+  --warn: #b45309; /* added — amber, 4.5:1 on white */
+  --warn-tint: #fffbeb;
+  --warn-fg: #92400e;
+  --caution: #c2410c; /* demoted — orange */
+  --caution-tint: #fff7ed;
+  --caution-fg: #9a3412;
+
+  --info: #0e7490;
+  --info-tint: #ecfeff;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #08191d; /* deep teal-black */
+    --surface: #0d232a;
+    --surface-muted: #123037;
+    --foreground: #e6f4f7;
+    --muted-foreground: #9cbcc4; /* ~6:1 on surface */
+    --border: #1e4551;
+
+    --primary: #22d3ee; /* brighter cyan for dark surfaces */
+    --primary-strong: #67e8f9;
+    --on-primary: #06202a;
+    --accent: #34d399;
+    --ring: #22d3ee;
+
+    --ok: #34d399;
+    --ok-tint: #06281f;
+    --ok-fg: #6ee7b7;
+    --danger: #f87171;
+    --danger-tint: #2a1414;
+    --danger-fg: #fca5a5;
+    --warn: #fbbf24;
+    --warn-tint: #2a2008;
+    --warn-fg: #fcd34d;
+    --caution: #fb923c;
+    --caution-tint: #2a1a0c;
+    --caution-fg: #fdba74;
+
+    --info: #22d3ee;
+    --info-tint: #06272e;
   }
+}
+
+/* Expose tokens to Tailwind's utility layer (text-primary, bg-surface, etc.). */
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+
+  --color-primary: var(--primary);
+  --color-primary-strong: var(--primary-strong);
+  --color-on-primary: var(--on-primary);
+  --color-accent: var(--accent);
+  --color-ring: var(--ring);
+
+  --color-ok: var(--ok);
+  --color-ok-tint: var(--ok-tint);
+  --color-ok-fg: var(--ok-fg);
+  --color-danger: var(--danger);
+  --color-danger-tint: var(--danger-tint);
+  --color-danger-fg: var(--danger-fg);
+  --color-warn: var(--warn);
+  --color-warn-tint: var(--warn-tint);
+  --color-warn-fg: var(--warn-fg);
+  --color-caution: var(--caution);
+  --color-caution-tint: var(--caution-tint);
+  --color-caution-fg: var(--caution-fg);
+  --color-info: var(--info);
+  --color-info-tint: var(--info-tint);
+
+  --font-sans: var(--font-body);
+  --font-heading: var(--font-heading);
+  --font-mono: var(--font-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body), system-ui, sans-serif;
 }
 
-/* Additive: row reveal animation used by the OutcomeLedger demo. */
+h1, h2, h3, h4 {
+  font-family: var(--font-heading), var(--font-body), system-ui, sans-serif;
+}
+
+/* Row reveal used by the OutcomeLedger. */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -34,5 +126,17 @@ body {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+/* Respect the user's motion preference: disable non-essential motion. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

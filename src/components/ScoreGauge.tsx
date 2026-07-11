@@ -26,6 +26,16 @@ export default function ScoreGauge({ score, caption }: ScoreGaugeProps) {
   const startRef = useRef(0);
 
   useEffect(() => {
+    // Respect reduced-motion: snap straight to the target, no tween. (The CSS
+    // media query can't stop a requestAnimationFrame loop, so we check it here.)
+    const prefersReduced =
+      typeof window !== "undefined" &&
+      window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+    if (prefersReduced) {
+      setDisplay(score);
+      return;
+    }
+
     fromRef.current = display;
     startRef.current = performance.now();
     const from = fromRef.current;
@@ -48,7 +58,7 @@ export default function ScoreGauge({ score, caption }: ScoreGaugeProps) {
 
   const clamped = Math.max(0, Math.min(100, display));
   const rounded = Math.round(clamped);
-  const { hex, label, textClass } = scoreColor(rounded);
+  const { cssVar, label, textClass } = scoreColor(rounded);
   const filled = (clamped / 100) * CIRC;
 
   return (
@@ -65,7 +75,7 @@ export default function ScoreGauge({ score, caption }: ScoreGaugeProps) {
           <path
             d="M 16 108 A 84 84 0 0 1 184 108"
             fill="none"
-            className="stroke-zinc-200 dark:stroke-zinc-800"
+            stroke="var(--border)"
             strokeWidth="16"
             strokeLinecap="round"
           />
@@ -73,7 +83,7 @@ export default function ScoreGauge({ score, caption }: ScoreGaugeProps) {
           <path
             d="M 16 108 A 84 84 0 0 1 184 108"
             fill="none"
-            stroke={hex}
+            stroke={cssVar}
             strokeWidth="16"
             strokeLinecap="round"
             strokeDasharray={CIRC}
@@ -83,22 +93,26 @@ export default function ScoreGauge({ score, caption }: ScoreGaugeProps) {
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-end pb-1">
           <span
-            className={`text-6xl font-bold tabular-nums leading-none ${textClass}`}
+            className={`font-heading text-6xl font-bold tabular-nums leading-none ${textClass}`}
           >
             {rounded}
           </span>
-          <span className="text-xs font-medium uppercase tracking-widest text-zinc-400">
+          <span className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
             / 100
           </span>
         </div>
       </div>
       <div className="mt-1 text-center">
         <div className={`text-sm font-semibold ${textClass}`}>{label}</div>
-        <div className="text-xs text-zinc-500">Integrity score</div>
+        <div className="text-xs text-muted-foreground">Integrity score</div>
         {caption ? (
-          <div className="mt-1 text-xs text-zinc-500">{caption}</div>
+          <div className="mt-1 text-xs text-muted-foreground">{caption}</div>
         ) : null}
       </div>
+      {/* Screen-reader summary of the gauge's meaning (chart a11y). */}
+      <span className="sr-only" aria-live="polite">
+        Integrity score {rounded} of 100 — {label}.
+      </span>
     </div>
   );
 }

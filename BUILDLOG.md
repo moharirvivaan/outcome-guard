@@ -401,3 +401,50 @@ Entry format (copy this for every future entry):
   extra trials, score-breakdown panel, letter-styling changes.
 - What's next / open issues: unchanged from prior entry (PDF upload path needs a
   lib + UI; letter generation from the live result).
+
+## [2026-07-11 16:31] UI/UX restyle: "Accessible & Ethical" clinical design system
+- What was done (visual restyle + mobile/touch pass; no functional changes):
+  - Applied a coherent clinical design system (from the ui-ux-pro-max skill's
+    recommendation for a trial-integrity tool): calm cyan primary (#0e7490) +
+    health-green accent, WCAG-checked status colors, light + dark defined together.
+    The skill explicitly flagged AI purple/pink gradients and neon as anti-patterns,
+    which the prior generic zinc/blue UI avoided but didn't lean into.
+  - Design tokens: replaced ad-hoc per-component zinc/blue classes with SEMANTIC
+    tokens in globals.css (surface/foreground/muted/border, primary/accent/ring,
+    and ok/danger/warn/caution each with -tint/-fg pairs), exposed to Tailwind v4
+    via @theme so components use bg-surface / text-primary / border-l-danger etc.
+  - Typography: "Corporate Trust" pairing — Lexend (headings, designed for reading
+    proficiency) + Source Sans 3 (body), JetBrains Mono for data/NCT ids/quotes.
+    Loaded via next/font (self-hosted, display:swap) — no external CDN/CSP issue.
+  - Icons: replaced the 🛡️ and ▶ emoji with inline SVG (shield/play/info) per the
+    "no emoji as structural icons" rule.
+  - Accessibility: visible focus-visible rings on all interactive elements; global
+    prefers-reduced-motion rule + the ScoreGauge's requestAnimationFrame tween now
+    snaps instead of animating under reduced motion; sr-only live summary on the
+    gauge (chart a11y); role="alert"/"status" + aria-live on error/working banners.
+  - Touch/responsive: inputs & buttons ≥44px min height; mobile input font 16px
+    (base) to avoid iOS auto-zoom; results grid stacks on mobile with the score
+    card first, ledger second; padding scales sm:; flex-wrap on the control row.
+- Files changed: src/app/globals.css, src/app/layout.tsx, src/components/DemoApp.tsx,
+  src/components/OutcomeLedger.tsx, src/components/ScoreGauge.tsx,
+  src/components/outcomePresentation.ts.
+- Key decisions / assumptions:
+  - Kept the skill's recommended "Accessible & Ethical" style but swapped its
+    Exo/Roboto-Mono font pairing for Lexend/Source Sans 3 — better body readability
+    for a trust-critical tool than a "futuristic" face.
+  - scoreColor() now returns a CSS var (var(--ok/warn/danger)) instead of a fixed
+    hex so the gauge arc tracks light/dark automatically; ScoreGauge updated to match.
+  - No functional/logic changes — the streaming route, engine, and scoring are
+    untouched; this pass only changes how it looks/feels and its a11y.
+- How to verify it works (all run):
+  - WCAG contrast (computed): light-mode body 14.3:1, secondary 5.8:1, primary
+    5.4:1, all four status badges 6.8–7.6:1; dark-mode all ≥8:1. Every pair ≥AA.
+  - Rendered output: shield emoji count 0, SVG icons present, new button label,
+    font-heading in markup, primary #0e7490 + dark tokens (#08191d/#22d3ee) +
+    prefers-reduced-motion in the compiled CSS; viewport meta doesn't disable zoom.
+  - Screenshot (headless Chrome, dark mode) confirms the clinical look reads well.
+  - No regressions: live demo streams 34 events (paper from fixture), offline mock
+    still deterministic 20/100, engine fixture check + 10 score tests green.
+  - npx tsc --noEmit, npm run lint, npm run build all clean.
+- What's next / open issues: unchanged (PDF upload path needs a lib + UI; letter
+  generation from the live result).

@@ -112,67 +112,70 @@ export default function DemoApp() {
   }, [offlineOn, state.matches, state.status, state.phase]);
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-10">
+    <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
       <Header />
 
       {/* Controls */}
-      <section className="rounded-xl border border-zinc-200 bg-white p-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row">
+      <section className="rounded-2xl border border-border bg-surface p-4 shadow-sm sm:p-5">
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="flex-1">
-            <label htmlFor="nct" className="mb-1 block text-xs font-medium text-zinc-500">
+            <label htmlFor="nct" className="mb-1.5 block text-xs font-semibold text-muted-foreground">
               Paste an NCT ID
             </label>
             <input
               id="nct"
               type="text"
+              inputMode="text"
               autoComplete="off"
+              autoCapitalize="characters"
               spellCheck={false}
               value={nctInput}
               onChange={(e) => setNctInput(e.target.value)}
               placeholder="e.g. NCT01951625"
-              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 font-mono text-sm text-zinc-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/30 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100"
+              className="h-11 w-full rounded-lg border border-border bg-background px-3 font-mono text-base text-foreground outline-none transition-colors placeholder:text-muted-foreground/60 focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/40 sm:text-sm"
             />
           </div>
-          <div className="flex items-end gap-2">
-            <button
-              type="submit"
-              disabled={liveStreaming}
-              className="h-10 rounded-lg border border-zinc-300 bg-white px-4 text-sm font-medium text-zinc-800 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:hover:bg-zinc-800"
-            >
-              Audit
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={liveStreaming}
+            className="inline-flex h-11 items-center justify-center rounded-lg border border-border bg-surface px-5 text-sm font-semibold text-foreground transition-colors hover:bg-surface-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            Audit
+          </button>
         </form>
 
-        <div className="mt-4 flex flex-wrap items-center gap-3 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+        <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-2 border-t border-border pt-4">
           <button
             type="button"
             onClick={handleLoadDemo}
             disabled={liveStreaming}
-            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40 disabled:cursor-not-allowed disabled:opacity-60"
+            className="inline-flex min-h-11 items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-semibold text-on-primary shadow-sm transition-colors hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-surface disabled:cursor-not-allowed disabled:opacity-60"
           >
-            <span aria-hidden>▶</span>
+            <PlayIcon />
             Audit demo trial: Vericiguat / SOCRATES-REDUCED
           </button>
-          <span className="text-xs text-zinc-500">
+          <span className="font-mono text-xs text-muted-foreground">
             NCT01951625 · JAMA 2015
           </span>
 
-          <label className="ml-auto inline-flex cursor-pointer items-center gap-2 text-xs text-zinc-500">
+          <label className="ml-auto inline-flex min-h-11 cursor-pointer items-center gap-2 text-xs text-muted-foreground">
             <input
               type="checkbox"
               checked={offline}
               onChange={(e) => setOffline(e.target.checked)}
-              className="h-3.5 w-3.5 rounded border-zinc-300 dark:border-zinc-600"
+              className="h-4 w-4 rounded border-border accent-[color:var(--primary)] focus-visible:ring-2 focus-visible:ring-ring/50"
             />
-            Offline demo (no API key / network)
+            Offline demo (no key / network)
           </label>
         </div>
 
         {/* Reviewer-aid disclaimer, always visible. */}
-        <p className="mt-3 text-[11px] leading-relaxed text-zinc-400">
-          Each classification is a <strong>reviewer aid, not a verdict</strong> — every
-          flag carries a confidence and a verbatim quote you can check against the source.
+        <p className="mt-3 flex items-start gap-1.5 text-xs leading-relaxed text-muted-foreground">
+          <InfoIcon />
+          <span>
+            Each classification is a <strong className="font-semibold text-foreground">reviewer aid, not a verdict</strong> —
+            every flag carries a confidence and a verbatim quote you can check against the source.
+          </span>
         </p>
       </section>
 
@@ -187,11 +190,15 @@ export default function DemoApp() {
       ) : null}
 
       {!offlineOn && liveStreaming ? (
-        <div className="mt-6 flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800 dark:border-blue-500/30 dark:bg-blue-500/10 dark:text-blue-200">
-          <span className="h-2 w-2 animate-pulse rounded-full bg-blue-500" />
-          {state.phase || "Auditing…"}
+        <div
+          className="mt-6 flex items-center gap-2 rounded-lg border border-[color:var(--info)]/30 bg-info-tint px-4 py-3 text-sm text-info"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="h-2 w-2 animate-pulse rounded-full bg-info" />
+          <span className="font-medium">{state.phase || "Auditing…"}</span>
           {state.paperMeta ? (
-            <span className="ml-2 truncate text-xs text-blue-500/80">· {state.paperMeta}</span>
+            <span className="ml-1 truncate font-mono text-xs opacity-70">· {state.paperMeta}</span>
           ) : null}
         </div>
       ) : null}
@@ -248,9 +255,9 @@ export default function DemoApp() {
         />
       ) : null}
 
-      {state.status === "idle" && !offlineOn ? (
-        <p className="mt-10 text-center text-sm text-zinc-400">
-          Load the demo trial, or paste any NCT id, to run a live audit.
+      {state.status === "idle" && !offlineOn && !localError ? (
+        <p className="mt-10 text-center text-sm text-muted-foreground">
+          Audit the demo trial, or paste any NCT id, to run a live audit.
         </p>
       ) : null}
     </div>
@@ -281,32 +288,62 @@ function liveAuditShim(state: ReturnType<typeof useAuditStream>["state"]) {
 function Header() {
   return (
     <header className="mb-8">
-      <div className="flex items-center gap-2">
-        <span className="text-2xl" aria-hidden>
-          🛡️
+      <div className="flex items-center gap-2.5">
+        <span className="inline-flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary" aria-hidden>
+          <ShieldIcon />
         </span>
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+        <h1 className="font-heading text-2xl font-bold tracking-tight text-foreground">
           outcome-guard
         </h1>
       </div>
-      <p className="mt-1 max-w-2xl text-sm text-zinc-600 dark:text-zinc-400">
+      <p className="mt-2 max-w-2xl text-sm leading-relaxed text-muted-foreground">
         Detect outcome switching in clinical trials: compare what a trial
-        <em> prespecified</em> in its registry against what its results paper
-        <em> actually reported</em> — surfacing silently dropped, added, and
-        demoted outcomes, every claim backed by a verbatim quote.
+        <em className="text-foreground"> prespecified</em> in its registry against what its results
+        paper <em className="text-foreground">actually reported</em> — surfacing silently dropped,
+        added, and demoted outcomes, every claim backed by a verbatim quote.
       </p>
     </header>
   );
 }
 
+/* --- Inline SVG icons (no emoji as structural icons) --- */
+function ShieldIcon() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10Z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+
+function PlayIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+      <path d="M8 5v14l11-7z" />
+    </svg>
+  );
+}
+
+function InfoIcon() {
+  return (
+    <svg className="mt-0.5 shrink-0 text-muted-foreground" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <circle cx="12" cy="12" r="10" />
+      <path d="M12 16v-4M12 8h.01" />
+    </svg>
+  );
+}
+
 function ErrorBanner({ message, onDismiss }: { message: string; onDismiss: () => void }) {
   return (
-    <div className="mt-6 rounded-xl border border-red-200 bg-red-50 p-5 text-sm text-red-900 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-200">
+    <div
+      className="mt-6 rounded-xl border border-[color:var(--danger)]/30 bg-danger-tint p-5 text-sm text-danger-fg"
+      role="alert"
+    >
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="font-semibold">Audit could not complete</p>
           <p className="mt-1">{message}</p>
-          <p className="mt-2 text-xs text-red-700/80 dark:text-red-300/70">
+          <p className="mt-2 text-xs opacity-80">
             Try the demo trial, another NCT with an open-access results paper, or the
             offline demo.
           </p>
@@ -314,7 +351,7 @@ function ErrorBanner({ message, onDismiss }: { message: string; onDismiss: () =>
         <button
           type="button"
           onClick={onDismiss}
-          className="shrink-0 rounded-md px-2 py-1 text-xs font-medium text-red-700 hover:bg-red-100 dark:text-red-300 dark:hover:bg-red-500/20"
+          className="inline-flex min-h-9 shrink-0 items-center rounded-md px-2.5 py-1 text-xs font-semibold transition-colors hover:bg-[color:var(--danger)]/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--danger)]/40"
         >
           Dismiss
         </button>
@@ -353,12 +390,16 @@ function WorkingState({
         : "This can take a few seconds.";
 
   return (
-    <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-6 dark:border-blue-500/30 dark:bg-blue-500/10">
+    <div
+      className="rounded-xl border border-[color:var(--info)]/25 bg-info-tint p-6"
+      role="status"
+      aria-live="polite"
+    >
       <div className="flex items-center gap-3">
         <Spinner />
         <div>
-          <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">{label}</p>
-          <p className="mt-0.5 text-xs text-blue-700/80 dark:text-blue-300/70">{sub}</p>
+          <p className="text-sm font-semibold text-foreground">{label}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{sub}</p>
         </div>
       </div>
       {/* Placeholder rows to signal that ledger content is imminent. */}
@@ -366,11 +407,11 @@ function WorkingState({
         {[0, 1, 2].map((i) => (
           <li
             key={i}
-            className="animate-pulse rounded-md border-l-4 border-l-blue-200 bg-white/60 px-4 py-3 dark:border-l-blue-500/30 dark:bg-zinc-900/40"
+            className="animate-pulse rounded-r-lg border-l-4 border-l-[color:var(--info)]/30 bg-surface/60 px-4 py-3"
             style={{ animationDelay: `${i * 150}ms` }}
           >
-            <div className="h-3 w-1/3 rounded bg-blue-100 dark:bg-blue-500/20" />
-            <div className="mt-2 h-3 w-2/3 rounded bg-blue-50 dark:bg-blue-500/10" />
+            <div className="h-3 w-1/3 rounded bg-[color:var(--info)]/15" />
+            <div className="mt-2 h-3 w-2/3 rounded bg-[color:var(--info)]/10" />
           </li>
         ))}
       </ul>
@@ -381,7 +422,7 @@ function WorkingState({
 function Spinner() {
   return (
     <span
-      className="inline-block h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-blue-300 border-t-blue-600 dark:border-blue-500/30 dark:border-t-blue-400"
+      className="inline-block h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-[color:var(--info)]/25 border-t-info"
       role="status"
       aria-label="Working"
     />
@@ -411,28 +452,38 @@ function ResultsLayout({
   badge,
   ledger,
 }: ResultsLayoutProps) {
+  const live = badge === "live";
   return (
-    <div className="mt-8 grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_260px]">
-      <div className="lg:order-1">{ledger}</div>
-      <aside className="lg:order-2">
-        <div className="sticky top-6 rounded-xl border border-zinc-200 bg-white p-5 shadow-sm dark:border-zinc-800 dark:bg-zinc-950">
+    <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_260px] lg:gap-8">
+      {/* On mobile the score card comes first so the headline number leads;
+          on desktop the ledger takes the main column and the card sits right. */}
+      <aside className="order-1 lg:order-2">
+        <div className="rounded-2xl border border-border bg-surface p-5 shadow-sm lg:sticky lg:top-6">
           <div className="mb-1 flex items-center justify-between gap-2">
-            <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
-              {nctId}
-            </span>
-            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-zinc-500 dark:bg-zinc-800">
+            <span className="font-mono text-sm font-semibold text-foreground">{nctId}</span>
+            <span
+              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
+                live
+                  ? "bg-info-tint text-info"
+                  : "bg-surface-muted text-muted-foreground"
+              }`}
+            >
+              {live ? <span className="h-1.5 w-1.5 rounded-full bg-info" /> : null}
               {badge}
             </span>
           </div>
-          <div className="mb-4 line-clamp-3 text-xs text-zinc-500">{title}</div>
+          <div className="mb-4 line-clamp-3 text-xs leading-relaxed text-muted-foreground">
+            {title}
+          </div>
           <ScoreGauge score={score} caption={caption} />
-          <dl className="mt-5 space-y-2 border-t border-zinc-100 pt-4 text-xs dark:border-zinc-800">
+          <dl className="mt-5 space-y-2 border-t border-border pt-4 text-xs">
             <Stat label="Registered outcomes" value={registered} />
             <Stat label="Reported outcomes" value={reported} />
             <Stat label="Matches judged" value={matchesJudged} />
           </dl>
         </div>
       </aside>
+      <div className="order-2 lg:order-1">{ledger}</div>
     </div>
   );
 }
@@ -440,8 +491,8 @@ function ResultsLayout({
 function Stat({ label, value }: { label: string; value: number }) {
   return (
     <div className="flex justify-between">
-      <dt className="text-zinc-500">{label}</dt>
-      <dd className="font-medium text-zinc-900 dark:text-zinc-100">{value}</dd>
+      <dt className="text-muted-foreground">{label}</dt>
+      <dd className="font-mono font-semibold tabular-nums text-foreground">{value}</dd>
     </div>
   );
 }
