@@ -257,3 +257,44 @@ Entry format (copy this for every future entry):
   - Add a PDF library (pdfjs-dist) so ingest.pdfToText works for uploaded papers.
   - Transcribe the COMPare oracle (still [TO TRANSCRIBE] in DEMO_TRIALS.md) and add the
     two backup trials' fixtures if promoted to live demos.
+
+## [2026-07-11 15:37] Saturating integrity score (fix score collapse to 0)
+- What was done:
+  - Rewrote `computeIntegrityScore`/`scoreBreakdown` in src/lib/report/score.ts from
+    linear-stacking flat penalties (which blew the 100-pt budget — 8 dropped secondaries
+    × 12 = 96, everything bad saturated to 0) to SATURATING per-category penalties with
+    diminishing returns, so scores spread across a usable range and ordering is preserved.
+  - Model: score = round(max(0, 100 − 60·sat(droppedPrimary,k=1) − 75·sat(droppedSecondary,k=4)
+    − 20·sat(added,k=6))), where sat(n,k)=1−exp(−n/k).
+  - Added `saturate()` as an exported pure helper; `scoreBreakdown` now returns the three
+    penalty `terms` (each with count/weight/k/points) plus raw and folded counts.
+  - Added unit tests (src/lib/report/score.test.ts) via Node's built-in node:test (no new
+    dep): clean→100, one dropped primary→~62, two primaries→48, demo→20, fully-switched→0,
+    saturation/ordering/folding invariants, breakdown shape. All 10 pass.
+  - Updated src/lib/report/letter.ts footer (removed the now-gone totalReward; summarizes the
+    three terms) and src/lib/report/HANDOFF.md for the new breakdown shape.
+- Files created/changed:
+  - Rewrote: src/lib/report/score.ts.
+  - Added: src/lib/report/score.test.ts.
+  - Edited: src/lib/report/letter.ts (footer), src/lib/report/HANDOFF.md.
+- Key decisions / assumptions (both confirmed with the user):
+  - The spec defined only 3 penalty terms; the mild switches (demoted/promoted/
+    timeframe_changed) are FOLDED so no discrepancy is free — demoted → dropped-secondary-
+    equivalent, promoted/timeframe_changed → added-equivalent.
+  - The spec's stated k-values mathematically produced ~57–63 for the demo, not the prose
+    target of "high-teens/low-20s". Per the user's "retune to hit high-teens" decision, the
+    secondary weight/k were retuned (Wsec=75, ksec=4; added Wadd=20, kadd=6; primary
+    unchanged at 60/k=1) so the real demo mock (0 dropped primary, 8 dropped secondary +
+    5 demoted = 13 folded, 3 added) lands at exactly 20 while keeping the other anchors
+    (clean=100, one primary=62, two primaries=48, fully-switched=0).
+  - No test-runner dependency added (would touch out-of-scope config); tests run under
+    `npx tsx --test`, matching the engine track's runnable-check convention.
+- How to verify it works:
+  - `npx tsx --test src/lib/report/score.test.ts` → 10/10 pass.
+  - Real demo: `mockAudit.integrityScore` (derived) = 20; letter footer shows the term
+    breakdown. `npx tsc --noEmit` clean, `npm run build` compiles, `npm run lint` clean,
+    engine fixture check still green.
+- What's next / open issues:
+  - If the UI wants to visualize the breakdown, it can now render `scoreBreakdown().terms`.
+  - k-values are demo-tuned; revisit once real (non-mock) audits and the transcribed COMPare
+    oracle exist, to confirm the band feels right across trials.

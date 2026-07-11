@@ -5,71 +5,86 @@
  * it returns a 0–100 integrity score (higher = the paper adhered more closely
  * to what the trial prespecified in the registry).
  *
- * The scoring model is a simple additive-penalty scheme. A trial starts at a
- * perfect 100 and loses points for each discrepancy the matcher found. The
- * weighting is deliberately steep for the offence that matters most in the
- * outcome-switching literature: silently dropping a *primary* outcome. A single
- * dropped primary should, on its own, tank the score.
+ * SCORING MODEL — saturating per-category penalties (not linear stacking).
+ *
+ * The score starts at 100 and subtracts three penalty terms — one for dropped
+ * PRIMARY outcomes, one for dropped SECONDARY outcomes, one for ADDED
+ * (unprespecified) outcomes — then floors at 0 and rounds to an int.
+ *
+ * Each term SATURATES: the first offence in a category hurts a lot and each
+ * additional one hurts less, so penalties can't stack linearly past the
+ * 100-point budget and collapse every bad trial to 0. This preserves ordering
+ * (more drops still always => lower score) while keeping usable dynamic range.
+ *
+ *   penalty_category = WEIGHT * saturate(count, k)
+ *   saturate(n, k)   = 1 - exp(-n / k)          // 0 at n=0, → 1 as n grows
+ *   score            = round( max(0, 100 - primary - secondary - added) )
+ *
+ * Why the shape:
+ *  - A dropped PRIMARY is the cardinal sin (k=1): even one is a ~38-point hit
+ *    (60·(1-e^-1) ≈ 37.9 → score 62), two push past 50. Primary stays king.
+ *  - Secondaries saturate at k=4: 1 drop ≈ 17 pts, but ~13 drops ≈ 71 pts
+ *    (not 13·something linear) — many drops still hurt, but can't alone zero it.
+ *  - Added outcomes saturate at k=6, capping a wall of additions near 20 pts.
+ *
+ * Mild "switch" classifications (demoted / promoted / timeframe_changed) have
+ * no term of their own; they are FOLDED into the three counts so no discrepancy
+ * is ever free: a demoted outcome counts as a dropped-secondary-equivalent
+ * (its prespecified emphasis was lost), and promoted / timeframe_changed count
+ * as added-equivalents (something not-as-registered was surfaced instead).
  */
 
-import type {
-  AuditResult,
-  OutcomeMatch,
-  OutcomeClassification,
-} from "@/lib/contract";
+import type { AuditResult, OutcomeMatch } from "@/lib/contract";
 
 /**
- * Penalty weights, in points off a 100 baseline. Ordered by severity.
- *
- * Rationale (decreasing weight):
- *  - A silently DROPPED PRIMARY outcome is the cardinal sin of outcome
- *    switching: the trial's own pre-registered headline result went missing.
- *    We charge a large fixed penalty so a single dropped primary alone drags
- *    the score into failing territory.
- *  - A silently dropped SECONDARY is serious but less so than losing the
- *    primary.
- *  - A SILENTLY ADDED outcome (reported but never prespecified) is the other
- *    half of outcome switching — a fishing-expedition result.
- *  - DEMOTED / PROMOTED (a primary reported as secondary, or vice versa)
- *    distorts emphasis but the outcome is at least still present.
- *  - A TIMEFRAME CHANGE (reported at a different time point than registered)
- *    is the mildest switch.
- *  - reported_as_prespecified is clean: it adds no penalty. We additionally
- *    give a small REWARD per faithfully-reported outcome so a diligent trial
- *    can recover ground lost to a minor infraction (never above 100).
+ * Penalty WEIGHTS — the maximum points a category can ever remove (the value
+ * each saturating term approaches as its count → ∞).
  */
-export const PENALTY = {
-  /** Silently dropping a prespecified PRIMARY outcome. Heaviest by far. */
+export const PENALTY_WEIGHT = {
+  /** Silently dropping prespecified PRIMARY outcomes. Heaviest by far. */
   DROPPED_PRIMARY: 60,
-  /** Silently dropping a prespecified SECONDARY outcome. */
-  DROPPED_SECONDARY: 12,
-  /** Reporting an outcome that was never prespecified. */
-  SILENTLY_ADDED: 10,
-  /** Primary reported as secondary. */
-  DEMOTED: 8,
-  /** Secondary reported/treated as primary. */
-  PROMOTED: 8,
-  /** Reported, but at a different time frame than registered. */
-  TIMEFRAME_CHANGED: 5,
+  /** Silently dropping prespecified SECONDARY outcomes (incl. demoted). */
+  DROPPED_SECONDARY: 75,
+  /** Reporting outcomes never prespecified (incl. promoted / timeframe_changed). */
+  ADDED: 20,
 } as const;
 
-/** Small credit per faithfully-reported outcome. Cosmetic; capped by the 100 clamp. */
-export const REWARD_PER_FAITHFUL = 1;
+/**
+ * Saturation constants `k` — larger k = slower saturation (each additional
+ * offence keeps mattering for longer). k=1 for primary means a single drop
+ * already lands most of the weight.
+ */
+export const PENALTY_K = {
+  DROPPED_PRIMARY: 1,
+  DROPPED_SECONDARY: 4,
+  ADDED: 6,
+} as const;
 
 const MIN_SCORE = 0;
 const MAX_SCORE = 100;
 const BASELINE = 100;
 
-/** Component of the penalty attributable to one classification bucket. */
-export interface ScoreComponent {
-  classification: OutcomeClassification | "dropped_primary" | "dropped_secondary";
+/**
+ * Diminishing-returns curve: 0 when n=0, approaching 1 as n grows.
+ * `saturate(n, k) = 1 - exp(-n / k)`.
+ */
+export function saturate(n: number, k: number): number {
+  if (n <= 0) return 0;
+  return 1 - Math.exp(-n / k);
+}
+
+/** One of the three penalty terms, with the arithmetic exposed for the UI/letter. */
+export interface PenaltyTerm {
+  category: "dropped_primary" | "dropped_secondary" | "added";
   /** Human label for UI/letter. */
   label: string;
-  /** How many matches fell in this bucket. */
+  /** How many outcomes fed this term (after folding). */
   count: number;
-  /** Penalty (points off) per item in this bucket. Negative for the faithful reward. */
-  perItem: number;
-  /** Total points contributed by this bucket (count * perItem). Negative = credit. */
+  /** Maximum this category could ever remove (the saturating weight). */
+  weight: number;
+  /** Saturation constant used. */
+  k: number;
+  /** Actual points removed = weight * saturate(count, k). */
   points: number;
 }
 
@@ -77,15 +92,16 @@ export interface ScoreComponent {
 export interface ScoreBreakdown {
   /** The final clamped score, identical to computeIntegrityScore(audit). */
   score: number;
-  /** Where the score started before penalties/credits. */
+  /** Where the score started before penalties. */
   baseline: number;
-  /** Sum of penalty points (positive = points lost). */
+  /** Sum of all penalty points removed (positive = points lost). */
   totalPenalty: number;
-  /** Sum of reward points (positive = points credited back). */
-  totalReward: number;
-  /** Per-bucket components, penalties first then the faithful-reporting credit. */
-  components: ScoreComponent[];
-  /** Convenience counts used across the app and the letter. */
+  /** The three saturating penalty terms. */
+  terms: PenaltyTerm[];
+  /**
+   * Raw classification counts BEFORE folding, plus the folded counts that
+   * actually feed the three terms. `faithful` is informational (not scored).
+   */
   counts: {
     faithful: number;
     droppedPrimary: number;
@@ -94,14 +110,18 @@ export interface ScoreBreakdown {
     promoted: number;
     demoted: number;
     timeframeChanged: number;
+    /** droppedSecondary + demoted — feeds the secondary term. */
+    foldedDroppedSecondary: number;
+    /** silentlyAdded + promoted + timeframeChanged — feeds the added term. */
+    foldedAdded: number;
   };
 }
 
 /**
  * True when a `silently_dropped` match points at a registered outcome whose
- * registry `type` is "primary". Looks the ref up in the trial record; a match
- * with a null or out-of-range registeredRef is treated as non-primary (it
- * cannot be a dropped registered outcome without one).
+ * registry `type` is "primary". A match with a null or out-of-range
+ * registeredRef is treated as non-primary (it cannot be a dropped registered
+ * outcome without one).
  */
 function isDroppedPrimary(match: OutcomeMatch, audit: AuditResult): boolean {
   if (match.classification !== "silently_dropped") return false;
@@ -115,8 +135,7 @@ function isDroppedPrimary(match: OutcomeMatch, audit: AuditResult): boolean {
  * Compute the full, explainable breakdown behind the integrity score.
  *
  * Exposed so the UI and the letter generator can show *why* the number is what
- * it is rather than just the number. `computeIntegrityScore` is a thin wrapper
- * over this.
+ * it is. `computeIntegrityScore` is a thin wrapper over this.
  */
 export function scoreBreakdown(audit: AuditResult): ScoreBreakdown {
   const counts = {
@@ -153,72 +172,54 @@ export function scoreBreakdown(audit: AuditResult): ScoreBreakdown {
     }
   }
 
-  const penaltyComponents: ScoreComponent[] = [
+  // Fold the mild switches in so no discrepancy is free:
+  //  - demoted counts as a dropped-secondary-equivalent (emphasis lost);
+  //  - promoted / timeframe_changed count as added-equivalents.
+  const foldedDroppedSecondary = counts.droppedSecondary + counts.demoted;
+  const foldedAdded =
+    counts.silentlyAdded + counts.promoted + counts.timeframeChanged;
+
+  const terms: PenaltyTerm[] = [
     {
-      classification: "dropped_primary",
-      label: "Silently dropped PRIMARY outcome",
+      category: "dropped_primary",
+      label: "Silently dropped PRIMARY outcome(s)",
       count: counts.droppedPrimary,
-      perItem: PENALTY.DROPPED_PRIMARY,
-      points: counts.droppedPrimary * PENALTY.DROPPED_PRIMARY,
+      weight: PENALTY_WEIGHT.DROPPED_PRIMARY,
+      k: PENALTY_K.DROPPED_PRIMARY,
+      points:
+        PENALTY_WEIGHT.DROPPED_PRIMARY *
+        saturate(counts.droppedPrimary, PENALTY_K.DROPPED_PRIMARY),
     },
     {
-      classification: "dropped_secondary",
-      label: "Silently dropped secondary outcome",
-      count: counts.droppedSecondary,
-      perItem: PENALTY.DROPPED_SECONDARY,
-      points: counts.droppedSecondary * PENALTY.DROPPED_SECONDARY,
+      category: "dropped_secondary",
+      label: "Silently dropped / demoted secondary outcome(s)",
+      count: foldedDroppedSecondary,
+      weight: PENALTY_WEIGHT.DROPPED_SECONDARY,
+      k: PENALTY_K.DROPPED_SECONDARY,
+      points:
+        PENALTY_WEIGHT.DROPPED_SECONDARY *
+        saturate(foldedDroppedSecondary, PENALTY_K.DROPPED_SECONDARY),
     },
     {
-      classification: "silently_added",
-      label: "Silently added (unprespecified) outcome",
-      count: counts.silentlyAdded,
-      perItem: PENALTY.SILENTLY_ADDED,
-      points: counts.silentlyAdded * PENALTY.SILENTLY_ADDED,
-    },
-    {
-      classification: "demoted",
-      label: "Demoted (primary reported as secondary)",
-      count: counts.demoted,
-      perItem: PENALTY.DEMOTED,
-      points: counts.demoted * PENALTY.DEMOTED,
-    },
-    {
-      classification: "promoted",
-      label: "Promoted (secondary reported as primary)",
-      count: counts.promoted,
-      perItem: PENALTY.PROMOTED,
-      points: counts.promoted * PENALTY.PROMOTED,
-    },
-    {
-      classification: "timeframe_changed",
-      label: "Time frame changed vs. registration",
-      count: counts.timeframeChanged,
-      perItem: PENALTY.TIMEFRAME_CHANGED,
-      points: counts.timeframeChanged * PENALTY.TIMEFRAME_CHANGED,
+      category: "added",
+      label: "Silently added / unprespecified outcome(s)",
+      count: foldedAdded,
+      weight: PENALTY_WEIGHT.ADDED,
+      k: PENALTY_K.ADDED,
+      points: PENALTY_WEIGHT.ADDED * saturate(foldedAdded, PENALTY_K.ADDED),
     },
   ];
 
-  const rewardComponent: ScoreComponent = {
-    classification: "reported_as_prespecified",
-    label: "Faithfully reported as prespecified",
-    count: counts.faithful,
-    perItem: -REWARD_PER_FAITHFUL,
-    points: -(counts.faithful * REWARD_PER_FAITHFUL),
-  };
-
-  const totalPenalty = penaltyComponents.reduce((sum, c) => sum + c.points, 0);
-  const totalReward = counts.faithful * REWARD_PER_FAITHFUL;
-
-  const raw = BASELINE - totalPenalty + totalReward;
+  const totalPenalty = terms.reduce((sum, t) => sum + t.points, 0);
+  const raw = BASELINE - totalPenalty;
   const score = Math.max(MIN_SCORE, Math.min(MAX_SCORE, Math.round(raw)));
 
   return {
     score,
     baseline: BASELINE,
     totalPenalty,
-    totalReward,
-    components: [...penaltyComponents, rewardComponent],
-    counts,
+    terms,
+    counts: { ...counts, foldedDroppedSecondary, foldedAdded },
   };
 }
 

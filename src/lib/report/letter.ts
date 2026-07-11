@@ -269,10 +269,14 @@ export function renderTemplateLetter(audit: AuditResult): string {
   p.push("Yours faithfully,\nThe outcome-guard audit team");
 
   // Footer: transparency about how the number was derived.
+  const termSummary = breakdown.terms
+    .filter((t) => t.count > 0)
+    .map((t) => `${t.label.toLowerCase()} −${Math.round(t.points)}`)
+    .join("; ");
   p.push(
     `— Audit integrity score: ${breakdown.score}/100 ` +
-      `(baseline ${breakdown.baseline}; total penalty ${breakdown.totalPenalty}; ` +
-      `faithful-reporting credit ${breakdown.totalReward}).`,
+      `(baseline ${breakdown.baseline}; total penalty −${Math.round(breakdown.totalPenalty)}` +
+      `${termSummary ? `: ${termSummary}` : ""}).`,
   );
 
   return p.join("\n\n");
