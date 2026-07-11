@@ -448,3 +448,51 @@ Entry format (copy this for every future entry):
   - npx tsc --noEmit, npm run lint, npm run build all clean.
 - What's next / open issues: unchanged (PDF upload path needs a lib + UI; letter
   generation from the live result).
+
+## [2026-07-11 16:48] Results summary UI: verdict banner, distribution bar, filter chips
+- What was done (PRESENTATION-ONLY; derived from data already in component state):
+  - Added a pure grouping helper in outcomePresentation.ts: `groupFor()` folds the
+    six classifications into faithful / dropped (silently_dropped + demoted) / added
+    (silently_added + promoted + timeframe_changed) — mirroring the scorer's fold —
+    and `countGroups(matches)` returns {faithful,dropped,added,total}. No new data.
+  - VerdictBanner (resultsSummary.tsx): full-width strip under the input card, shown
+    only once an audit completes (live "done" / offline timer complete). One
+    plain-English sentence ("This trial reported N of M pre-specified outcomes as
+    promised — dropped X, and added Y it never registered"), the largest text in the
+    results region after the score, with an alert/check SVG icon and severity accent
+    (red when dropped>0 or score<40, amber for milder, green if clean).
+  - DistributionBar (resultsSummary.tsx): a single stacked green/red/amber bar in the
+    summary card just under the score gauge, above the registered/reported/matches
+    numbers; widths proportional to the counts, each segment labelled with its count
+    (never color-only), same status tokens as the ledger rows.
+  - FilterChips (resultsSummary.tsx) + a `filter` prop on OutcomeLedger: chips
+    "All N · Faithful · Dropped · Added" above the ledger filter the visible rows
+    client-side (no refetch); "All" resets and is the default; active chip filled +
+    aria-pressed. The ledger's TIMER and STREAMED modes both honor `filter`; an empty
+    filter shows a "No … outcomes" row instead of a blank list.
+- Files changed (all presentation): src/components/DemoApp.tsx,
+  src/components/OutcomeLedger.tsx, src/components/outcomePresentation.ts;
+  added src/components/resultsSummary.tsx. HANDOFF updated.
+- HARD CONSTRAINT respected: the audit route, useAuditStream data logic, the engine,
+  the scorer, and every contract type are byte-for-byte UNCHANGED (verified via
+  git diff). Nothing new is computed — the three widgets read the same matches array
+  and registered-outcome count the ledger/gauge already use.
+- Key decisions / assumptions:
+  - Grouping lives in outcomePresentation.ts (next to the existing status tokens) so
+    banner, bar, chips, and ledger filter all agree on one fold.
+  - The distribution bar reflects whatever rows exist "now", so it grows as the live
+    audit streams; the verdict banner waits for completion. Offline completion is
+    tracked with an explicit `offlineComplete` flag set by the timer's onComplete
+    (not a fragile score-equality check).
+- How to verify it works (all run):
+  - Live NCT01951625: computed counts from the streamed matches = 6 faithful / 9
+    dropped / 12 added of 15 registered → banner/chip/bar values match; tone red.
+  - Offline (deterministic, headless-Chrome interaction test): banner "1 of 15 …
+    dropped 13, added 3"; chips "All 17 · Faithful 1 · Dropped 13 · Added 3" (All
+    active); distribution aria "1 faithful, 13 dropped, 3 added"; clicking Dropped →
+    13 rows + aria-pressed=true; clicking All → resets to 17. Score/gauge still 20.
+  - Responsive at 390px: no horizontal overflow; banner wraps, chips wrap, summary
+    card leads then ledger. Desktop + mobile screenshots confirm.
+  - npx tsc --noEmit, npm run lint, npm run build all clean; package.json untouched.
+- What's next / open issues: unchanged (PDF upload path needs a lib + UI; letter
+  generation from the live result).

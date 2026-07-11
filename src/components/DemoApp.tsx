@@ -16,9 +16,10 @@
 import { useCallback, useMemo, useState } from "react";
 import type { OutcomeMatch } from "@/lib/contract";
 import { mockAudit } from "./mockAudit";
-import OutcomeLedger from "./OutcomeLedger";
+import OutcomeLedger, { type LedgerFilter } from "./OutcomeLedger";
 import ScoreGauge from "./ScoreGauge";
-import { PRESENTATION } from "./outcomePresentation";
+import { PRESENTATION, countGroups } from "./outcomePresentation";
+import { VerdictBanner, DistributionBar, FilterChips } from "./resultsSummary";
 import { useAuditStream } from "./useAuditStream";
 
 const DEMO_NCT = "NCT01951625";
@@ -26,6 +27,9 @@ const DEMO_NCT = "NCT01951625";
 export default function DemoApp() {
   const [nctInput, setNctInput] = useState("");
   const [offline, setOffline] = useState(false);
+
+  // Client-side view filter over the already-loaded ledger rows. Default "all".
+  const [filter, setFilter] = useState<LedgerFilter>("all");
 
   const { state, start, reset } = useAuditStream();
 
@@ -37,17 +41,21 @@ export default function DemoApp() {
   const [offlineOn, setOfflineOn] = useState(false);
   const [offlineScore, setOfflineScore] = useState(100);
   const [offlineIssues, setOfflineIssues] = useState(0);
+  const [offlineComplete, setOfflineComplete] = useState(false);
 
   const runOffline = useCallback(() => {
     reset();
+    setFilter("all");
     setOfflineScore(100);
     setOfflineIssues(0);
+    setOfflineComplete(false);
     setOfflineOn(true);
   }, [reset]);
 
   const runLive = useCallback(
     (nctId: string) => {
       setLocalError(null);
+      setFilter("all");
       setOfflineOn(false);
       void start({ nctId });
     },
@@ -94,6 +102,7 @@ export default function DemoApp() {
 
   const handleOfflineComplete = useCallback(() => {
     setOfflineScore(mockAudit.integrityScore);
+    setOfflineComplete(true);
   }, []);
 
   // ---- Derived view for the live path --------------------------------------
@@ -110,6 +119,17 @@ export default function DemoApp() {
       ? `${issues} issue${issues === 1 ? "" : "s"} flagged`
       : state.phase;
   }, [offlineOn, state.matches, state.status, state.phase]);
+
+  // ---- Summary counts (derived from matches already in state) --------------
+  // The distribution bar reflects whatever rows exist right now (grows as the
+  // live audit streams); the verdict banner shows only once the audit is done.
+  const activeMatches = offlineOn ? mockAudit.matches : state.matches;
+  const counts = useMemo(() => countGroups(activeMatches), [activeMatches]);
+  const registeredCount = offlineOn
+    ? mockAudit.trialRecord.registeredOutcomes.length
+    : (state.trial?.registeredOutcomes.length ?? 0);
+  const finalScore = offlineOn ? mockAudit.integrityScore : state.score;
+  const auditComplete = offlineOn ? offlineComplete : state.status === "done";
 
   return (
     <div className="mx-auto w-full max-w-4xl px-4 py-8 sm:px-6 sm:py-10">
@@ -179,6 +199,15 @@ export default function DemoApp() {
         </p>
       </section>
 
+      {/* Verdict banner — the headline finding, once an audit completes. */}
+      {auditComplete && registeredCount > 0 ? (
+        <VerdictBanner
+          counts={counts}
+          registeredCount={registeredCount}
+          score={finalScore}
+        />
+      ) : null}
+
       {/* Error banners: local validation first, then stream errors. */}
       {localError ? (
         <ErrorBanner message={localError} onDismiss={() => setLocalError(null)} />
@@ -214,13 +243,18 @@ export default function DemoApp() {
           reported={mockAudit.reportedOutcomes.length}
           matchesJudged={mockAudit.matches.length}
           badge="offline demo"
+          distribution={<DistributionBar counts={counts} />}
           ledger={
-            <OutcomeLedger
-              audit={mockAudit}
-              intervalMs={220}
-              onReveal={handleOfflineReveal}
-              onComplete={handleOfflineComplete}
-            />
+            <>
+              <FilterChips counts={counts} active={filter} onChange={setFilter} />
+              <OutcomeLedger
+                audit={mockAudit}
+                intervalMs={220}
+                onReveal={handleOfflineReveal}
+                onComplete={handleOfflineComplete}
+                filter={filter}
+              />
+            </>
           }
         />
       ) : null}
@@ -236,14 +270,21 @@ export default function DemoApp() {
           reported={state.reportedOutcomes.length}
           matchesJudged={state.matches.length}
           badge="live"
+          distribution={
+            counts.total > 0 ? <DistributionBar counts={counts} /> : null
+          }
           ledger={
             state.matches.length > 0 || state.status === "done" ? (
-              <OutcomeLedger
-                audit={liveAuditShim(state)}
-                streamed
-                matches={state.matches}
-                streaming={state.status !== "done"}
-              />
+              <>
+                <FilterChips counts={counts} active={filter} onChange={setFilter} />
+                <OutcomeLedger
+                  audit={liveAuditShim(state)}
+                  streamed
+                  matches={state.matches}
+                  streaming={state.status !== "done"}
+                  filter={filter}
+                />
+              </>
             ) : (
               <WorkingState
                 status={state.status}
@@ -438,6 +479,8 @@ interface ResultsLayoutProps {
   reported: number;
   matchesJudged: number;
   badge: string;
+  /** Summary distribution bar, rendered under the score gauge. */
+  distribution?: React.ReactNode;
   ledger: React.ReactNode;
 }
 
@@ -450,6 +493,7 @@ function ResultsLayout({
   reported,
   matchesJudged,
   badge,
+  distribution,
   ledger,
 }: ResultsLayoutProps) {
   const live = badge === "live";
@@ -476,6 +520,9 @@ function ResultsLayout({
             {title}
           </div>
           <ScoreGauge score={score} caption={caption} />
+          {distribution ? (
+            <div className="mt-4 border-t border-border pt-4">{distribution}</div>
+          ) : null}
           <dl className="mt-5 space-y-2 border-t border-border pt-4 text-xs">
             <Stat label="Registered outcomes" value={registered} />
             <Stat label="Reported outcomes" value={reported} />

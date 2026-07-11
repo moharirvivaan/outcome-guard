@@ -7,9 +7,49 @@
  * Accessibility: every bucket carries a text label and a glyph, so meaning is
  * never conveyed by color alone.
  */
-import type { OutcomeClassification } from "@/lib/contract";
+import type { OutcomeClassification, OutcomeMatch } from "@/lib/contract";
 
 export type Severity = "green" | "red" | "amber" | "warning";
+
+/**
+ * Presentation grouping of the six classifications into the three buckets the
+ * summary UI (verdict banner, distribution bar, filter chips) speaks in. This
+ * mirrors the scorer's fold (src/lib/report/score.ts) — demoted counts with the
+ * drops, promoted/timeframe_changed with the additions — but is a pure UI-side
+ * derivation over matches already in component state; it computes nothing new.
+ */
+export type OutcomeGroup = "faithful" | "dropped" | "added";
+
+export function groupFor(classification: OutcomeClassification): OutcomeGroup {
+  switch (classification) {
+    case "reported_as_prespecified":
+      return "faithful";
+    case "silently_dropped":
+    case "demoted":
+      return "dropped";
+    case "silently_added":
+    case "promoted":
+    case "timeframe_changed":
+      return "added";
+  }
+}
+
+export interface GroupCounts {
+  faithful: number;
+  dropped: number;
+  added: number;
+  total: number;
+}
+
+/** Count matches into the three summary buckets. Pure, no side effects. */
+export function countGroups(matches: OutcomeMatch[]): GroupCounts {
+  const counts: GroupCounts = { faithful: 0, dropped: 0, added: 0, total: 0 };
+  for (const m of matches) {
+    counts[groupFor(m.classification)]++;
+    counts.total++;
+  }
+  return counts;
+}
 
 export interface ClassPresentation {
   severity: Severity;

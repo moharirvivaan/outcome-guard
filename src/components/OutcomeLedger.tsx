@@ -16,7 +16,10 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import type { AuditResult, OutcomeMatch } from "@/lib/contract";
-import { PRESENTATION } from "./outcomePresentation";
+import { PRESENTATION, groupFor, type OutcomeGroup } from "./outcomePresentation";
+
+/** View filter over already-loaded rows. "all" shows every match. */
+export type LedgerFilter = "all" | OutcomeGroup;
 
 interface OutcomeLedgerProps {
   audit: AuditResult;
@@ -35,6 +38,16 @@ interface OutcomeLedgerProps {
   matches?: OutcomeMatch[];
   /** STREAMED mode: true while more matches/events are still expected. */
   streaming?: boolean;
+  /**
+   * Client-side VIEW filter over the already-revealed rows (no refetch, no
+   * change to timing or scoring). Default "all".
+   */
+  filter?: LedgerFilter;
+}
+
+/** True when a match should be visible under the current view filter. */
+function passesFilter(match: OutcomeMatch, filter: LedgerFilter): boolean {
+  return filter === "all" || groupFor(match.classification) === filter;
 }
 
 /** Resolve the display measure text for a match from either side. */
@@ -203,12 +216,20 @@ function StreamedLedger({
   audit,
   matches = [],
   streaming = false,
+  filter = "all",
 }: OutcomeLedgerProps) {
+  const visible = matches
+    .map((m, idx) => ({ m, idx }))
+    .filter(({ m }) => passesFilter(m, filter));
   return (
     <LedgerShell streaming={streaming} revealed={matches.length} total={0}>
-      {matches.map((m, idx) => (
+      {visible.map(({ m, idx }) => (
         <Row key={idx} audit={audit} match={m} />
       ))}
+      <EmptyFilterRow
+        show={!streaming && matches.length > 0 && visible.length === 0}
+        filter={filter}
+      />
     </LedgerShell>
   );
 }
@@ -219,6 +240,7 @@ function TimerLedger({
   intervalMs = 220,
   onReveal,
   onComplete,
+  filter = "all",
 }: OutcomeLedgerProps) {
   // Order matches so the demo tells a story: green first, then reds, then the
   // demotions, then the amber additions.
@@ -260,11 +282,38 @@ function TimerLedger({
 
   const streaming = revealed < ordered.length;
 
+  const revealedRows = ordered
+    .slice(0, revealed)
+    .map((m, idx) => ({ m, idx }))
+    .filter(({ m }) => passesFilter(m, filter));
+
   return (
     <LedgerShell streaming={streaming} revealed={revealed} total={ordered.length}>
-      {ordered.slice(0, revealed).map((m, idx) => (
+      {revealedRows.map(({ m, idx }) => (
         <Row key={idx} audit={audit} match={m} />
       ))}
+      <EmptyFilterRow
+        show={!streaming && revealed > 0 && revealedRows.length === 0}
+        filter={filter}
+      />
     </LedgerShell>
+  );
+}
+
+/** Shown when the active filter matches no rows, so the ledger isn't blank. */
+function EmptyFilterRow({ show, filter }: { show: boolean; filter: LedgerFilter }) {
+  if (!show) return null;
+  const label =
+    filter === "faithful"
+      ? "faithfully reported"
+      : filter === "dropped"
+        ? "dropped or demoted"
+        : filter === "added"
+          ? "added or switched"
+          : "";
+  return (
+    <li className="rounded-r-lg border-l-4 border-l-border bg-surface-muted/40 px-4 py-3 text-sm text-muted-foreground">
+      No {label} outcomes in this audit.
+    </li>
   );
 }
