@@ -33,6 +33,30 @@ export const maxDuration = 300;
 const DEMO_NCT = "NCT01951625";
 const DEMO_PAPER_FIXTURE = "paper.NCT01951625.json";
 
+/** Delay between streamed `match` events so rows visibly land one-by-one. */
+const MATCH_STREAM_DELAY_MS = 180;
+
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Narrative order for streamed matches: faithful → dropped → switches → added. */
+function matchRank(classification: string): number {
+  switch (classification) {
+    case "reported_as_prespecified":
+      return 0;
+    case "silently_dropped":
+      return 1;
+    case "demoted":
+    case "promoted":
+      return 2;
+    case "timeframe_changed":
+      return 3;
+    case "silently_added":
+      return 4;
+    default:
+      return 5;
+  }
+}
+
 /** The paper fixture on disk mirrors PaperInput's structured-sections form. */
 interface PaperFixture {
   source?: { path?: string };
@@ -204,10 +228,18 @@ async function runAudit(
   }
 
   // Stream each match individually so the ledger animates row-by-row. (The
-  // matcher resolves all matches in one call; we fan them out as events.)
-  matches.forEach((match, i) => {
-    emit({ stage: "match", match, index: i + 1, total: matches.length });
-  });
+  // matcher resolves all matches in one call; we fan them out as events.) Order
+  // them so the audit tells a story — faithful first, then the damning drops,
+  // then demotions/switches, then the additions — and pace them with a small
+  // delay so the rows visibly stream in and the gauge ticks down instead of the
+  // whole set landing in one frame.
+  const ordered = [...matches].sort(
+    (a, b) => matchRank(a.classification) - matchRank(b.classification),
+  );
+  for (let i = 0; i < ordered.length; i++) {
+    emit({ stage: "match", match: ordered[i], index: i + 1, total: ordered.length });
+    if (i < ordered.length - 1) await delay(MATCH_STREAM_DELAY_MS);
+  }
 
   // 5. Assemble + score -------------------------------------------------------
   const draft: AuditResult = {

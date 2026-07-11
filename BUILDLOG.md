@@ -357,3 +357,47 @@ Entry format (copy this for every future entry):
     throws until pdfjs-dist is added) and a UI file-picker.
   - Consider persisting/caching audits and generating the letter (report/letter.ts)
     from the live result behind a button.
+
+## [2026-07-11 16:10] Polish: live progress states, demo choreography, gauge drop
+- What was done (essentials-only polish; no new features):
+  - No more dead air during the LLM beats. Added a `WorkingState` component
+    (spinner + labeled text + placeholder rows) rendered in the ledger slot while
+    extracting/matching: "Reading the paper's Methods & Results…" and
+    "Opus is comparing {registeredCount} registered vs {reportedCount} reported
+    outcomes…", using counts already known from the registry/reported events.
+  - Gauge now animates DOWN as damning rows land, not just a final snap. The route
+    now streams `match` events with a small delay (180ms) in narrative order
+    (faithful → dropped → switches → added), and useAuditStream tracks a
+    `runningScore` that drops by each arriving match's penalty, then settles on the
+    authoritative scored/done value. DemoApp feeds the gauge `runningScore`.
+  - Demo choreography: the primary button is now one obvious stage action —
+    "Audit demo trial: Vericiguat / SOCRATES-REDUCED". The run visibly sequences
+    registry → paper → extracting → matching → streamed rows → gauge ticks down.
+  - "Reviewer aid, not a verdict" note and per-row confidence remain visible throughout.
+- Files changed:
+  - src/app/api/audit/route.ts (ordered + delayed match streaming; matchRank/delay helpers).
+  - src/components/useAuditStream.ts (runningScore that decrements per match penalty).
+  - src/components/DemoApp.tsx (WorkingState + Spinner, gauge fed runningScore, button relabel).
+- Key decisions / assumptions:
+  - The LIVE score is LLM-derived and non-deterministic: across runs the demo lands
+    in the high-teens/low-20s (observed 15, 17, 20) — always "serious outcome
+    switching", always animating down, but not pinned to exactly 20. The OFFLINE
+    demo (mockAudit) is the deterministic 20/100 guarantee and the hard fallback.
+  - The runningScore is an estimate as rows arrive (it can bottom out at 0 before
+    the final settle); the scored/done event is authoritative and the gauge tweens
+    to it. This is intentional — the drop reads as damning, the number is honest.
+- How to verify it works (all run):
+  - Live demo: registry/paper/extracting at 0.3s, extracting held ~23s (Sonnet)
+    under the WorkingState, matching held ~24s (Opus) under the WorkingState, then
+    27 rows streamed at ~180ms spacing with runningScore dropping 100→92→44→13→0,
+    settling on the authoritative score (15–20 band). No dead air at any beat.
+  - Reliability: the demo paper path is FIXTURE-ONLY — loadDemoPaperFixture() reads
+    from disk; getPaperText (network) lives only in the europepmc else-branch, so the
+    demo works even if Europe PMC is down. Offline checkbox reproduces 20/100 with no
+    key and no network (verified with ANTHROPIC_API_KEY unset).
+  - tsc --noEmit clean, npm run lint clean, npm run build compiles (/api/audit ƒ).
+    Engine fixture check + score unit tests still green.
+- Explicitly NOT built (out of scope this pass): PDF upload/file-picker, curated
+  extra trials, score-breakdown panel, letter-styling changes.
+- What's next / open issues: unchanged from prior entry (PDF upload path needs a
+  lib + UI; letter generation from the live result).

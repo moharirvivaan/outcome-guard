@@ -18,6 +18,7 @@ import type {
   ReportedOutcome,
   TrialRecord,
 } from "@/lib/contract";
+import { PRESENTATION } from "./outcomePresentation";
 
 export type AuditStatus =
   | "idle"
@@ -39,7 +40,13 @@ export interface AuditStreamState {
   reportedOutcomes: ReportedOutcome[];
   /** Matches received so far, in arrival order. */
   matches: OutcomeMatch[];
-  /** Live integrity score (100 until scored, then the real value). */
+  /**
+   * Running integrity score for the gauge: starts at 100 and drops by each
+   * arriving match's penalty so the gauge animates DOWN as damning rows land,
+   * then settles on the authoritative `score` from the scored/done events.
+   */
+  runningScore: number;
+  /** Authoritative integrity score once scored (100 until then). */
   score: number;
   /** The final assembled result once `status === "done"`. */
   result: AuditResult | null;
@@ -53,6 +60,7 @@ const INITIAL: AuditStreamState = {
   paperMeta: null,
   reportedOutcomes: [],
   matches: [],
+  runningScore: 100,
   score: 100,
   result: null,
   errorMessage: null,
@@ -91,15 +99,20 @@ export function useAuditStream() {
           };
         case "matching":
           return { ...s, status: "matching", phase: "Matching registered vs reported…" };
-        case "match":
+        case "match": {
+          const penalty = PRESENTATION[event.match.classification]?.penalty ?? 0;
           return {
             ...s,
             status: "matching",
             phase: `Matching outcomes… ${event.index}/${event.total}`,
             matches: [...s.matches, event.match],
+            // Drop the running score as each damning row lands.
+            runningScore: Math.max(0, s.runningScore - penalty),
           };
+        }
         case "scored":
-          return { ...s, score: event.integrityScore };
+          // Settle the gauge on the authoritative score.
+          return { ...s, score: event.integrityScore, runningScore: event.integrityScore };
         case "done":
           return {
             ...s,
@@ -107,6 +120,7 @@ export function useAuditStream() {
             phase: "Audit complete",
             result: event.auditResult,
             score: event.auditResult.integrityScore,
+            runningScore: event.auditResult.integrityScore,
             // Ensure the ledger shows the authoritative final match set.
             matches: event.auditResult.matches,
             reportedOutcomes: event.auditResult.reportedOutcomes,

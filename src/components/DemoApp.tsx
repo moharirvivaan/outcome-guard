@@ -152,10 +152,10 @@ export default function DemoApp() {
             className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500/40 disabled:cursor-not-allowed disabled:opacity-60"
           >
             <span aria-hidden>▶</span>
-            Load demo trial (NCT01951625)
+            Audit demo trial: Vericiguat / SOCRATES-REDUCED
           </button>
           <span className="text-xs text-zinc-500">
-            SOCRATES-REDUCED · Vericiguat · JAMA 2015
+            NCT01951625 · JAMA 2015
           </span>
 
           <label className="ml-auto inline-flex cursor-pointer items-center gap-2 text-xs text-zinc-500">
@@ -223,14 +223,14 @@ export default function DemoApp() {
         <ResultsLayout
           nctId={state.trial.nctId}
           title={state.trial.title}
-          score={state.score}
+          score={state.runningScore}
           caption={liveCaption}
           registered={state.trial.registeredOutcomes.length}
           reported={state.reportedOutcomes.length}
           matchesJudged={state.matches.length}
           badge="live"
           ledger={
-            state.matches.length > 0 || state.status === "matching" || state.status === "done" ? (
+            state.matches.length > 0 || state.status === "done" ? (
               <OutcomeLedger
                 audit={liveAuditShim(state)}
                 streamed
@@ -238,9 +238,11 @@ export default function DemoApp() {
                 streaming={state.status !== "done"}
               />
             ) : (
-              <p className="text-sm text-zinc-500">
-                {state.phase || "Preparing the audit…"}
-              </p>
+              <WorkingState
+                status={state.status}
+                registeredCount={state.trial.registeredOutcomes.length}
+                reportedCount={state.reportedOutcomes.length}
+              />
             )
           }
         />
@@ -318,6 +320,71 @@ function ErrorBanner({ message, onDismiss }: { message: string; onDismiss: () =>
         </button>
       </div>
     </div>
+  );
+}
+
+/**
+ * Active working state shown in the ledger slot during the extract/match beats,
+ * so the several seconds each LLM call takes read as visible work, not a freeze.
+ */
+function WorkingState({
+  status,
+  registeredCount,
+  reportedCount,
+}: {
+  status: string;
+  registeredCount: number;
+  reportedCount: number;
+}) {
+  const label =
+    status === "extracting"
+      ? "Reading the paper's Methods & Results…"
+      : status === "matching"
+        ? `Opus is comparing ${registeredCount} registered vs ${reportedCount} reported outcomes…`
+        : status === "reported"
+          ? "Preparing the comparison…"
+          : "Fetching the registry & results paper…";
+
+  const sub =
+    status === "extracting"
+      ? "Extracting every reported outcome with a verbatim quote (Sonnet)."
+      : status === "matching"
+        ? "Aligning each registered outcome to what the paper reported and classifying switches."
+        : "This can take a few seconds.";
+
+  return (
+    <div className="rounded-xl border border-blue-200 bg-blue-50/60 p-6 dark:border-blue-500/30 dark:bg-blue-500/10">
+      <div className="flex items-center gap-3">
+        <Spinner />
+        <div>
+          <p className="text-sm font-semibold text-blue-900 dark:text-blue-200">{label}</p>
+          <p className="mt-0.5 text-xs text-blue-700/80 dark:text-blue-300/70">{sub}</p>
+        </div>
+      </div>
+      {/* Placeholder rows to signal that ledger content is imminent. */}
+      <ul className="mt-4 flex flex-col gap-2" aria-hidden>
+        {[0, 1, 2].map((i) => (
+          <li
+            key={i}
+            className="animate-pulse rounded-md border-l-4 border-l-blue-200 bg-white/60 px-4 py-3 dark:border-l-blue-500/30 dark:bg-zinc-900/40"
+            style={{ animationDelay: `${i * 150}ms` }}
+          >
+            <div className="h-3 w-1/3 rounded bg-blue-100 dark:bg-blue-500/20" />
+            <div className="mt-2 h-3 w-2/3 rounded bg-blue-50 dark:bg-blue-500/10" />
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function Spinner() {
+  return (
+    <span
+      className="inline-block h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-blue-300 border-t-blue-600 dark:border-blue-500/30 dark:border-t-blue-400"
+      role="status"
+      aria-label="Working"
+    />
   );
 }
 
